@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────
+   Obsidia Design System
+   Premium trading-platform palette — minimal, data-dense, no violet.
+   ───────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* Surfaces */
+  --color-background: #0B0F14;
+  --color-surface: #11161C;
+  --color-card: #151A21;
+  --color-elevated: #1A2029;
+
+  /* Borders */
+  --color-border: #1F2630;
+  --color-border-strong: #2A3340;
+
+  /* Text */
+  --color-foreground: #E6EDF3;
+  --color-muted-foreground: #9BA3AF;
+  --color-subtle-foreground: #6B7280;
+
+  /* Brand + status — primary = obsidian-shard violet */
+  --color-primary: #A855F7;          /* violet-500 — matches logo glow */
+  --color-primary-hover: #9333EA;    /* violet-600 */
+  --color-primary-soft: #C084FC;     /* violet-400 — for tinted bg/text */
+  --color-accent: #D946EF;           /* fuchsia-500 — sparkle accent */
+  --color-success: #22C55E;
+  --color-success-soft: #16A34A;
+  --color-danger: #EF4444;
+  --color-danger-soft: #DC2626;
+  --color-warning: #F59E0B;
+
+  /* Chart palette (recharts series) */
+  --color-chart-1: #A855F7;
+  --color-chart-2: #22C55E;
+  --color-chart-3: #F59E0B;
+  --color-chart-4: #EF4444;
+  --color-chart-5: #3B82F6;
+
+  /* Typography */
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 6px;
+  border: 2px solid var(--color-background);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* ── Selection ───────────────────────────────────────────── */
+::selection {
+  background: rgba(168, 85, 247, 0.25);
+  color: var(--color-foreground);
+}
+
+/* ── Focus ring ──────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Input autofill fix ──────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-card) inset;
+  caret-color: var(--color-foreground);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── Numeric tabular ─ for data tables / KPI ─────────────── */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ── Subtle hairline divider ─────────────────────────────── */
+.hairline {
+  border-color: var(--color-border);
+}
+
+/* ── No-flash animations (perf) ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
