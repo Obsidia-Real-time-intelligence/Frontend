@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use } from "react";
-import { ArrowLeft, Pause, Play, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Pause, Play, Edit, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { EquityCurve } from "@/components/charts/equity-curve";
@@ -17,7 +17,13 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { fmtPct, fmtUsd, timeAgo } from "@/lib/utils";
-import { MOCK_STRATEGIES, MOCK_TRADES, mockEquityCurve } from "@/lib/mock";
+import {
+  useStrategy,
+  useTrades,
+  useLatestBacktest,
+  useUpdateStrategyStatus,
+  useDeleteStrategy,
+} from "@/lib/api";
 
 export default function StrategyDetailPage({
   params,
@@ -25,10 +31,58 @@ export default function StrategyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const strategy = MOCK_STRATEGIES.find((s) => s.id === id) ?? MOCK_STRATEGIES[0];
-  const trades = MOCK_TRADES;
-  const equity = mockEquityCurve(180, 8500);
+  const { data: strategy, isLoading } = useStrategy(id);
+  const { data: trades = [] } = useTrades(id);
+  const { data: backtest } = useLatestBacktest(id);
+  const updateStatus = useUpdateStrategyStatus();
+  const deleteStrat = useDeleteStrategy();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-[var(--color-muted-foreground)]">
+        <Loader2 className="size-4 animate-spin mr-2" />
+        <span className="text-sm">Loading…</span>
+      </div>
+    );
+  }
+
+  if (!strategy) {
+    return (
+      <div className="rounded-lg border border-dashed border-[var(--color-border)] py-16 text-center">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Strategy not found.
+        </p>
+        <Button asChild size="sm" className="mt-4">
+          <Link href="/app/strategies">
+            <ArrowLeft className="size-4" /> Back to strategies
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const equity =
+    backtest?.equity_curve.map((p) => ({
+      t: p.t.slice(0, 10),
+      equity: p.equity,
+    })) ?? [];
+
   const live = strategy.status === "live";
+
+  async function togglePauseLive() {
+    if (!strategy) return;
+    await updateStatus.mutateAsync({
+      id: strategy.id,
+      status: live ? "paused" : "live",
+    });
+  }
+
+  async function handleDelete() {
+    if (!strategy) return;
+    if (!confirm(`Delete "${strategy.name}"? This cannot be undone.`)) return;
+    await deleteStrat.mutateAsync(strategy.id);
+    window.location.href = "/app/strategies";
+  }
 
   return (
     <>
@@ -43,7 +97,12 @@ export default function StrategyDetailPage({
                 Back
               </Link>
             </Button>
-            <Button variant="secondary" size="sm">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={togglePauseLive}
+              disabled={updateStatus.isPending}
+            >
               {live ? (
                 <>
                   <Pause className="size-4" />
@@ -56,11 +115,19 @@ export default function StrategyDetailPage({
                 </>
               )}
             </Button>
-            <Button variant="secondary" size="sm">
-              <Edit className="size-4" />
-              Edit
+            <Button variant="secondary" size="sm" asChild>
+              <Link href={`/app/strategies/${strategy.id}/edit`}>
+                <Edit className="size-4" />
+                Edit
+              </Link>
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Delete">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Delete"
+              onClick={handleDelete}
+              disabled={deleteStrat.isPending}
+            >
               <Trash2 className="size-4" />
             </Button>
           </>
@@ -146,51 +213,80 @@ export default function StrategyDetailPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {trades.slice(0, 12).map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>
-                  <Badge variant={t.side === "long" ? "success" : "danger"}>
-                    {t.side.toUpperCase()}
-                  </Badge>
-                </TableCell>
-                <TableCell>${t.entry_price.toFixed(2)}</TableCell>
-                <TableCell>${t.exit_price.toFixed(2)}</TableCell>
+            {trades.length === 0 && (
+              <TableRow>
                 <TableCell
-                  className={`text-right font-medium ${
-                    t.pnl_usd >= 0
-                      ? "text-[var(--color-success)]"
-                      : "text-[var(--color-danger)]"
-                  }`}
+                  colSpan={7}
+                  className="text-center py-12 text-[var(--color-muted-foreground)]"
                 >
-                  {fmtUsd(t.pnl_usd, true)}
-                </TableCell>
-                <TableCell
-                  className={`text-right ${
-                    t.pnl_pct >= 0
-                      ? "text-[var(--color-success)]"
-                      : "text-[var(--color-danger)]"
-                  }`}
-                >
-                  {fmtPct(t.pnl_pct)}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      t.exit_reason === "tp"
-                        ? "success"
-                        : t.exit_reason === "sl"
-                          ? "danger"
-                          : "default"
-                    }
-                  >
-                    {t.exit_reason}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right text-[var(--color-muted-foreground)]">
-                  {timeAgo(t.exit_time)}
+                  No trades yet. {live ? "Strategy is live — alerts will populate here when conditions match." : "Activate the strategy to start collecting trades."}
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {trades.slice(0, 12).map((t) => {
+              const isOpen = t.closed_at === null;
+              const pnlUsd = t.pnl_usd ?? 0;
+              const pnlPct = t.pnl_pct ?? 0;
+              return (
+                <TableRow key={t.id}>
+                  <TableCell>
+                    <Badge variant={t.side === "long" ? "success" : "danger"}>
+                      {t.side.toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>${t.entry_price.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {t.exit_price !== null
+                      ? `$${t.exit_price.toFixed(2)}`
+                      : "—"}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right font-medium ${
+                      isOpen
+                        ? "text-[var(--color-muted-foreground)]"
+                        : pnlUsd >= 0
+                          ? "text-[var(--color-success)]"
+                          : "text-[var(--color-danger)]"
+                    }`}
+                  >
+                    {isOpen ? "open" : fmtUsd(pnlUsd, true)}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right ${
+                      isOpen
+                        ? "text-[var(--color-muted-foreground)]"
+                        : pnlPct >= 0
+                          ? "text-[var(--color-success)]"
+                          : "text-[var(--color-danger)]"
+                    }`}
+                  >
+                    {isOpen ? "—" : fmtPct(pnlPct)}
+                  </TableCell>
+                  <TableCell>
+                    {t.exit_reason ? (
+                      <Badge
+                        variant={
+                          t.exit_reason === "tp"
+                            ? "success"
+                            : t.exit_reason === "sl"
+                              ? "danger"
+                              : "default"
+                        }
+                      >
+                        {t.exit_reason}
+                      </Badge>
+                    ) : (
+                      <span className="text-[10px] text-[var(--color-muted-foreground)] uppercase tracking-wider">
+                        live
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right text-[var(--color-muted-foreground)]">
+                    {timeAgo(t.closed_at ?? t.opened_at)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

@@ -20,7 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TVAdvanced } from "@/components/charts/tv-advanced";
 import { fmtPct, timeAgo } from "@/lib/utils";
-import { MOCK_ALERTS } from "@/lib/mock";
+import { useLivePrice, type Tick } from "@/lib/live-prices";
+import { useAlerts, useSrZones, type SrZone } from "@/lib/api";
+import type { Alert } from "@/lib/types";
 
 const SYMBOL_TO_TV: Record<string, string> = {
   "SOL/USDT": "BINANCE:SOLUSDT",
@@ -30,37 +32,6 @@ const SYMBOL_TO_TV: Record<string, string> = {
   "PYTH/USDT": "BINANCE:PYTHUSDT",
 };
 
-// mock per-symbol stats
-const STATS: Record<string, MarketStats> = {
-  "SOL/USDT": {
-    price: 84.06,
-    change_5m: -0.03,
-    change_1h: -0.05,
-    change_6h: 0.22,
-    change_24h: -0.72,
-    mc: "48.3B",
-    fdv: "52.5B",
-    liquidity: "707M",
-    volume_24h: "14.1B",
-    holders: "3.82M",
-    org_score: 98.9,
-  },
-};
-
-interface MarketStats {
-  price: number;
-  change_5m: number;
-  change_1h: number;
-  change_6h: number;
-  change_24h: number;
-  mc: string;
-  fdv: string;
-  liquidity: string;
-  volume_24h: string;
-  holders: string;
-  org_score: number;
-}
-
 export default function MarketDetailPage({
   params,
 }: {
@@ -69,18 +40,20 @@ export default function MarketDetailPage({
   const { symbol: rawSymbol } = use(params);
   const symbol = decodeURIComponent(rawSymbol);
   const tvSymbol = SYMBOL_TO_TV[symbol] ?? "BINANCE:SOLUSDT";
-  const stats = STATS[symbol] ?? STATS["SOL/USDT"];
-  const symbolAlerts = MOCK_ALERTS.filter((a) => a.symbol === symbol);
+
+  const tick = useLivePrice(symbol);
+  const { data: srZones = [] } = useSrZones(symbol, "15m");
+  const { data: allAlerts = [] } = useAlerts(100);
+  const symbolAlerts = allAlerts.filter((a) => a.symbol === symbol);
 
   return (
     <div className="-mx-4 md:-mx-6 -my-6">
-      {/* Symbol header bar */}
-      <SymbolHeader symbol={symbol} stats={stats} />
+      <SymbolHeader symbol={symbol} tick={tick} />
 
       <div className="grid grid-cols-12 gap-px bg-[var(--color-border)] border-y border-[var(--color-border)]">
         {/* LEFT — token stats rail */}
         <aside className="col-span-12 lg:col-span-3 bg-[var(--color-background)]">
-          <LeftRail stats={stats} symbol={symbol} symbolAlerts={symbolAlerts} />
+          <LeftRail tick={tick} srZones={srZones} />
         </aside>
 
         {/* CENTER — chart */}
@@ -93,7 +66,7 @@ export default function MarketDetailPage({
 
         {/* RIGHT — trade panel */}
         <aside className="col-span-12 lg:col-span-3 bg-[var(--color-background)]">
-          <TradePanel symbol={symbol} price={stats.price} />
+          <TradePanel symbol={symbol} price={tick?.price ?? 0} />
         </aside>
       </div>
     </div>
@@ -102,9 +75,9 @@ export default function MarketDetailPage({
 
 // ── Header ─────────────────────────────────────────────────────────
 
-function SymbolHeader({ symbol, stats }: { symbol: string; stats: MarketStats }) {
+function SymbolHeader({ symbol, tick }: { symbol: string; tick: Tick | null }) {
   const ticker = symbol.split("/")[0];
-  const positive = stats.change_24h >= 0;
+  const positive = tick ? tick.change_24h_pct >= 0 : false;
   return (
     <div className="px-5 py-3 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center gap-4 flex-wrap">
       <Link
@@ -119,22 +92,31 @@ function SymbolHeader({ symbol, stats }: { symbol: string; stats: MarketStats })
       <div>
         <div className="flex items-center gap-2">
           <span className="text-base font-semibold tracking-tight">{symbol}</span>
-          <Badge variant="outline">5y data</Badge>
+          {tick && (
+            <span className="flex items-center gap-1 text-[10px] text-[var(--color-muted-foreground)] uppercase tracking-wider">
+              <span className="size-1 rounded-full bg-[var(--color-success)] animate-pulse" />
+              live
+            </span>
+          )}
         </div>
         <div className="text-[11px] text-[var(--color-muted-foreground)] mt-0.5">
-          Wrapped SOL · Solana L1
+          Coinbase ticker
         </div>
       </div>
 
       <div className="flex items-baseline gap-2 ml-2 tabular">
-        <span className="text-2xl font-semibold">${stats.price.toFixed(2)}</span>
-        <span
-          className={`text-sm font-medium ${
-            positive ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
-          }`}
-        >
-          {fmtPct(stats.change_24h)}
+        <span className="text-2xl font-semibold">
+          {tick ? `$${tick.price.toFixed(2)}` : "—"}
         </span>
+        {tick && (
+          <span
+            className={`text-sm font-medium ${
+              positive ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
+            }`}
+          >
+            {fmtPct(tick.change_24h_pct)}
+          </span>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-2">
@@ -167,84 +149,106 @@ function SymbolHeader({ symbol, stats }: { symbol: string; stats: MarketStats })
 // ── Left rail ──────────────────────────────────────────────────────
 
 function LeftRail({
-  stats,
-  symbol,
-  symbolAlerts,
+  tick,
+  srZones,
 }: {
-  stats: MarketStats;
-  symbol: string;
-  symbolAlerts: typeof MOCK_ALERTS;
+  tick: Tick | null;
+  srZones: SrZone[];
 }) {
-  const SR_LEVELS = [
-    { kind: "resistance", price: 86.76, touches: 14 },
-    { kind: "resistance", price: 86.3, touches: 11 },
-    { kind: "resistance", price: 85.74, touches: 13 },
-    { kind: "support", price: 83.73, touches: 11 },
-    { kind: "support", price: 82.76, touches: 10 },
-    { kind: "support", price: 82.32, touches: 10 },
-  ];
-
   return (
     <div className="p-5 space-y-5">
-      {/* Top stats grid */}
+      {/* Live stats from Coinbase ticker */}
       <div className="grid grid-cols-2 gap-3">
-        <Stat label="MC" value={`$${stats.mc}`} />
-        <Stat label="FDV" value={`$${stats.fdv}`} />
-        <Stat label="Liquidity" value={`$${stats.liquidity}`} />
-        <Stat label="Holders" value={stats.holders} />
         <Stat
-          label="24h Vol"
-          value={`$${stats.volume_24h}`}
+          label="24h High"
+          value={tick ? `$${tick.high_24h.toFixed(2)}` : "—"}
+        />
+        <Stat
+          label="24h Low"
+          value={tick ? `$${tick.low_24h.toFixed(2)}` : "—"}
+        />
+        <Stat
+          label="24h Open"
+          value={tick ? `$${tick.open_24h.toFixed(2)}` : "—"}
+        />
+        <Stat
+          label="24h Range"
+          value={
+            tick ? `$${(tick.high_24h - tick.low_24h).toFixed(2)}` : "—"
+          }
+        />
+        <Stat
+          label="24h Volume (base)"
+          value={tick ? `${(tick.volume_24h / 1000).toFixed(1)}k` : "—"}
           className="col-span-2"
         />
       </div>
 
-      {/* Timeframe change blocks */}
+      {/* 24h change vs open / low / high */}
       <div>
         <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)] mb-2">
-          Change
+          24h Change
         </div>
-        <div className="grid grid-cols-4 gap-1.5">
-          <ChangeBlock label="5m" value={stats.change_5m} />
-          <ChangeBlock label="1h" value={stats.change_1h} />
-          <ChangeBlock label="6h" value={stats.change_6h} />
-          <ChangeBlock label="24h" value={stats.change_24h} />
+        <div className="grid grid-cols-3 gap-1.5">
+          <ChangeBlock label="vs Open" value={tick?.change_24h_pct ?? 0} />
+          <ChangeBlock
+            label="vs Low"
+            value={
+              tick && tick.low_24h > 0
+                ? ((tick.price - tick.low_24h) / tick.low_24h) * 100
+                : 0
+            }
+          />
+          <ChangeBlock
+            label="vs High"
+            value={
+              tick && tick.high_24h > 0
+                ? ((tick.price - tick.high_24h) / tick.high_24h) * 100
+                : 0
+            }
+          />
         </div>
       </div>
 
-      {/* S/R levels — Obsidia signature feature */}
+      {/* S/R from sr_zones table */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
             S/R levels (15m)
           </div>
-          <Badge variant="outline">{SR_LEVELS.length}</Badge>
+          <Badge variant="outline">{srZones.length}</Badge>
         </div>
-        <ul className="space-y-1">
-          {SR_LEVELS.map((l, i) => (
-            <li
-              key={i}
-              className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
-                l.kind === "resistance"
-                  ? "bg-[var(--color-danger)]/5"
-                  : "bg-[var(--color-success)]/5"
-              }`}
-            >
-              <span
-                className={`tabular font-medium ${
+        {srZones.length === 0 ? (
+          <p className="text-[11px] text-[var(--color-muted-foreground)] py-2">
+            Computing — refreshes hourly via worker.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {srZones.slice(0, 8).map((l) => (
+              <li
+                key={l.id}
+                className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
                   l.kind === "resistance"
-                    ? "text-[var(--color-danger)]"
-                    : "text-[var(--color-success)]"
+                    ? "bg-[var(--color-danger)]/5"
+                    : "bg-[var(--color-success)]/5"
                 }`}
               >
-                ${l.price.toFixed(2)}
-              </span>
-              <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                {l.kind[0].toUpperCase()} ×{l.touches}
-              </span>
-            </li>
-          ))}
-        </ul>
+                <span
+                  className={`tabular font-medium ${
+                    l.kind === "resistance"
+                      ? "text-[var(--color-danger)]"
+                      : "text-[var(--color-success)]"
+                  }`}
+                >
+                  ${Number(l.center).toFixed(2)}
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                  {l.kind[0].toUpperCase()} ×{l.touches}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* AI summary card */}
@@ -403,7 +407,7 @@ function BottomTabs({
   symbolAlerts,
 }: {
   symbol: string;
-  symbolAlerts: typeof MOCK_ALERTS;
+  symbolAlerts: Alert[];
 }) {
   return (
     <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] p-4">

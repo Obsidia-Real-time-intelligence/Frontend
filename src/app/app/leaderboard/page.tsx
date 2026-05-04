@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Trophy,
   Medal,
   Award,
   Crown,
@@ -11,6 +10,7 @@ import {
   TrendingDown,
   ShieldCheck,
   Users,
+  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -24,25 +24,20 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { fmtPct, fmtUsd } from "@/lib/utils";
-import { MOCK_LEADERBOARD, MOCK_CREATORS } from "@/lib/mock";
-import type { LeaderRow, CreatorRow } from "@/lib/mock";
+import { fmtPct } from "@/lib/utils";
+import { useLeaderboard, type LeaderboardRow } from "@/lib/api";
 
-type Window = "24h" | "7d" | "30d";
+type RankWindow = "24h" | "7d" | "30d";
 
 export default function LeaderboardPage() {
-  const [window, setWindow] = useState<Window>("30d");
+  const [window, setWindow] = useState<RankWindow>("30d");
+  const { data: rows = [], isLoading } = useLeaderboard();
 
-  const sorted = [...MOCK_LEADERBOARD].sort((a, b) => {
-    const get = (r: LeaderRow) =>
-      window === "24h"
-        ? r.return_pct_24h
-        : window === "7d"
-          ? r.return_pct_7d
-          : r.return_pct_30d;
-    return get(b) - get(a);
-  });
-
+  // The view currently exposes return_pct_30d; 24h/7d windows fall back to it
+  // until the backend computes windowed returns server-side.
+  const sorted = [...rows].sort(
+    (a, b) => (b.return_pct_30d ?? 0) - (a.return_pct_30d ?? 0)
+  );
   const top3 = sorted.slice(0, 3);
 
   return (
@@ -69,27 +64,57 @@ export default function LeaderboardPage() {
         }
       />
 
-      {/* Podium — top 3 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {top3.map((row, i) => (
-          <PodiumCard key={row.strategy_id} row={row} place={i + 1} window={window} />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="flex items-center justify-center py-16 text-[var(--color-muted-foreground)]">
+          <Loader2 className="size-4 animate-spin mr-2" />
+          <span className="text-sm">Loading leaderboard…</span>
+        </div>
+      )}
 
-      <Tabs defaultValue="strategies">
-        <TabsList>
-          <TabsTrigger value="strategies">Strategies</TabsTrigger>
-          <TabsTrigger value="creators">Creators</TabsTrigger>
-        </TabsList>
+      {!isLoading && rows.length === 0 && (
+        <div className="rounded-lg border border-dashed border-[var(--color-border)] py-16 text-center">
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            No public strategies yet. The leaderboard fills as creators
+            publish strategies.
+          </p>
+          <Button asChild size="sm" className="mt-4">
+            <Link href="/app/strategies/new">Create one</Link>
+          </Button>
+        </div>
+      )}
 
-        <TabsContent value="strategies">
-          <StrategyLeaderboard rows={sorted} window={window} />
-        </TabsContent>
+      {!isLoading && rows.length > 0 && (
+        <>
+          {/* Podium — top 3 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {top3.map((row, i) => (
+              <PodiumCard
+                key={row.strategy_id}
+                row={row}
+                place={i + 1}
+                window={window}
+              />
+            ))}
+          </div>
 
-        <TabsContent value="creators">
-          <CreatorLeaderboard rows={MOCK_CREATORS} />
-        </TabsContent>
-      </Tabs>
+          <Tabs defaultValue="strategies">
+            <TabsList>
+              <TabsTrigger value="strategies">
+                Strategies ({rows.length})
+              </TabsTrigger>
+              <TabsTrigger value="creators">Creators</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="strategies">
+              <StrategyLeaderboard rows={sorted} window={window} />
+            </TabsContent>
+
+            <TabsContent value="creators">
+              <CreatorLeaderboardFromStrategies rows={rows} />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
 
       <p className="mt-6 text-[10px] text-center text-[var(--color-muted-foreground)] leading-relaxed">
         All performance figures are net of real Jupiter Perps fees (0.14% RT) +
@@ -105,18 +130,13 @@ export default function LeaderboardPage() {
 function PodiumCard({
   row,
   place,
-  window,
+  window: rankWindow,
 }: {
-  row: LeaderRow;
+  row: LeaderboardRow;
   place: number;
-  window: Window;
+  window: RankWindow;
 }) {
-  const ret =
-    window === "24h"
-      ? row.return_pct_24h
-      : window === "7d"
-        ? row.return_pct_7d
-        : row.return_pct_30d;
+  const ret = row.return_pct_30d ?? 0; // until backend computes windowed returns
   const positive = ret >= 0;
 
   const Icon = place === 1 ? Crown : place === 2 ? Medal : Award;
@@ -132,18 +152,20 @@ function PodiumCard({
       ? "text-[var(--color-warning)]"
       : place === 2
         ? "text-[var(--color-muted-foreground)]"
-        : "text-[#CD7F32]"; // bronze
+        : "text-[#CD7F32]";
 
   return (
     <div
       className={`relative rounded-lg border p-5 bg-[var(--color-card)] ${tone}`}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className={`grid h-10 w-10 place-items-center rounded-md border-2 ${
-          place === 1
-            ? "border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10"
-            : "border-[var(--color-border)] bg-[var(--color-elevated)]"
-        }`}>
+        <div
+          className={`grid h-10 w-10 place-items-center rounded-md border-2 ${
+            place === 1
+              ? "border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10"
+              : "border-[var(--color-border)] bg-[var(--color-elevated)]"
+          }`}
+        >
           <Icon className={`size-5 ${iconColor}`} strokeWidth={2} />
         </div>
         <span className="text-3xl font-semibold tabular text-[var(--color-muted-foreground)] tracking-tight">
@@ -151,7 +173,7 @@ function PodiumCard({
         </span>
       </div>
       <Link
-        href={`/app/marketplace/m_${row.rank}`}
+        href={`/app/marketplace/${row.strategy_id}`}
         className="block hover:text-primary"
       >
         <div className="text-sm font-semibold tracking-tight truncate">
@@ -160,16 +182,14 @@ function PodiumCard({
       </Link>
       <div className="text-xs text-[var(--color-muted-foreground)] flex items-center gap-1.5 mt-0.5">
         {row.creator}
-        {row.verified && (
-          <ShieldCheck className="size-3 text-primary" />
-        )}
+        {row.creator_verified && <ShieldCheck className="size-3 text-primary" />}
         <span>·</span>
         <span>{row.symbol}</span>
       </div>
 
       <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-baseline justify-between">
         <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
-          {window} return
+          {rankWindow} return
         </span>
         <span
           className={`tabular text-2xl font-semibold tracking-tight ${
@@ -183,9 +203,22 @@ function PodiumCard({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-        <Mini label="WR" value={`${row.win_rate.toFixed(0)}%`} />
-        <Mini label="Sharpe" value={row.sharpe.toFixed(2)} />
-        <Mini label="MDD" value={`${row.max_drawdown_pct.toFixed(1)}%`} />
+        <Mini
+          label="WR"
+          value={row.win_rate != null ? `${row.win_rate.toFixed(0)}%` : "—"}
+        />
+        <Mini
+          label="Sharpe"
+          value={row.sharpe != null ? row.sharpe.toFixed(2) : "—"}
+        />
+        <Mini
+          label="MDD"
+          value={
+            row.max_drawdown_pct != null
+              ? `${row.max_drawdown_pct.toFixed(1)}%`
+              : "—"
+          }
+        />
       </div>
     </div>
   );
@@ -206,10 +239,10 @@ function Mini({ label, value }: { label: string; value: string }) {
 
 function StrategyLeaderboard({
   rows,
-  window,
+  window: rankWindow,
 }: {
-  rows: LeaderRow[];
-  window: Window;
+  rows: LeaderboardRow[];
+  window: RankWindow;
 }) {
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden">
@@ -219,7 +252,7 @@ function StrategyLeaderboard({
             <TableHead className="w-12">#</TableHead>
             <TableHead>Strategy</TableHead>
             <TableHead>Symbol</TableHead>
-            <TableHead className="text-right">{window} return</TableHead>
+            <TableHead className="text-right">{rankWindow} return</TableHead>
             <TableHead className="text-right">Win rate</TableHead>
             <TableHead className="text-right">Sharpe</TableHead>
             <TableHead className="text-right">MDD</TableHead>
@@ -230,12 +263,7 @@ function StrategyLeaderboard({
         </TableHeader>
         <TableBody>
           {rows.map((row, i) => {
-            const ret =
-              window === "24h"
-                ? row.return_pct_24h
-                : window === "7d"
-                  ? row.return_pct_7d
-                  : row.return_pct_30d;
+            const ret = row.return_pct_30d ?? 0;
             const positive = ret >= 0;
             return (
               <TableRow key={row.strategy_id}>
@@ -244,12 +272,12 @@ function StrategyLeaderboard({
                 </TableCell>
                 <TableCell>
                   <Link
-                    href={`/app/marketplace/m_${row.rank}`}
+                    href={`/app/marketplace/${row.strategy_id}`}
                     className="hover:text-primary"
                   >
                     <div className="font-medium text-foreground flex items-center gap-1.5">
                       {row.strategy_name}
-                      {row.verified && (
+                      {row.strategy_verified && (
                         <ShieldCheck className="size-3 text-primary shrink-0" />
                       )}
                     </div>
@@ -279,16 +307,18 @@ function StrategyLeaderboard({
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  {row.win_rate.toFixed(1)}%
+                  {row.win_rate != null ? `${row.win_rate.toFixed(1)}%` : "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {row.sharpe.toFixed(2)}
+                  {row.sharpe != null ? row.sharpe.toFixed(2) : "—"}
                 </TableCell>
                 <TableCell className="text-right text-[var(--color-muted-foreground)]">
-                  {row.max_drawdown_pct.toFixed(1)}%
+                  {row.max_drawdown_pct != null
+                    ? `${row.max_drawdown_pct.toFixed(1)}%`
+                    : "—"}
                 </TableCell>
                 <TableCell className="text-right text-[var(--color-muted-foreground)]">
-                  {row.trades}
+                  {row.trade_count ?? 0}
                 </TableCell>
                 <TableCell className="text-right text-[var(--color-muted-foreground)]">
                   <span className="inline-flex items-center gap-1 justify-end">
@@ -298,7 +328,9 @@ function StrategyLeaderboard({
                 </TableCell>
                 <TableCell>
                   <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/app/marketplace/m_${row.rank}`}>View</Link>
+                    <Link href={`/app/marketplace/${row.strategy_id}`}>
+                      View
+                    </Link>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -310,9 +342,58 @@ function StrategyLeaderboard({
   );
 }
 
-// ── Creators leaderboard ───────────────────────────────────────────
+// ── Creators leaderboard — derived from the strategies leaderboard ───
 
-function CreatorLeaderboard({ rows }: { rows: CreatorRow[] }) {
+interface CreatorAgg {
+  creator: string;
+  verified: boolean;
+  strategies_count: number;
+  avg_return_30d: number;
+  total_subscribers: number;
+}
+
+function aggregateCreators(rows: LeaderboardRow[]): CreatorAgg[] {
+  const map = new Map<string, CreatorAgg>();
+  for (const r of rows) {
+    const key = r.creator;
+    const existing = map.get(key) ?? {
+      creator: key,
+      verified: r.creator_verified,
+      strategies_count: 0,
+      avg_return_30d: 0,
+      total_subscribers: 0,
+    };
+    existing.strategies_count += 1;
+    existing.avg_return_30d += r.return_pct_30d ?? 0;
+    existing.total_subscribers += r.subscribers;
+    map.set(key, existing);
+  }
+  return Array.from(map.values())
+    .map((c) => ({
+      ...c,
+      avg_return_30d:
+        c.strategies_count > 0
+          ? c.avg_return_30d / c.strategies_count
+          : 0,
+    }))
+    .sort((a, b) => b.avg_return_30d - a.avg_return_30d);
+}
+
+function CreatorLeaderboardFromStrategies({
+  rows,
+}: {
+  rows: LeaderboardRow[];
+}) {
+  const creators = aggregateCreators(rows);
+  if (creators.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-[var(--color-border)] py-12 text-center">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          No creators yet.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden">
       <Table>
@@ -323,33 +404,28 @@ function CreatorLeaderboard({ rows }: { rows: CreatorRow[] }) {
             <TableHead className="text-right">Strategies</TableHead>
             <TableHead className="text-right">Avg 30d return</TableHead>
             <TableHead className="text-right">Subscribers</TableHead>
-            <TableHead className="text-right">AUM</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row, i) => (
-            <TableRow key={row.handle}>
+          {creators.map((row, i) => (
+            <TableRow key={row.creator}>
               <TableCell>
                 <RankBadge place={i + 1} />
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <div className="grid h-7 w-7 place-items-center rounded-full bg-[var(--color-elevated)] border border-[var(--color-border)] text-[11px] font-semibold uppercase">
-                    {row.handle.charAt(1).toUpperCase()}
+                    {row.creator.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <div className="font-medium text-foreground flex items-center gap-1.5">
-                      {row.handle}
-                      {row.verified && (
-                        <ShieldCheck className="size-3 text-primary" />
-                      )}
-                    </div>
+                  <div className="font-medium text-foreground flex items-center gap-1.5">
+                    {row.creator}
+                    {row.verified && (
+                      <ShieldCheck className="size-3 text-primary" />
+                    )}
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
-                {row.strategies_count}
-              </TableCell>
+              <TableCell className="text-right">{row.strategies_count}</TableCell>
               <TableCell
                 className={`text-right font-medium ${
                   row.avg_return_30d >= 0
@@ -361,9 +437,6 @@ function CreatorLeaderboard({ rows }: { rows: CreatorRow[] }) {
               </TableCell>
               <TableCell className="text-right text-[var(--color-muted-foreground)]">
                 {row.total_subscribers.toLocaleString()}
-              </TableCell>
-              <TableCell className="text-right text-[var(--color-muted-foreground)]">
-                {fmtUsd(row.total_aum_usd)}
               </TableCell>
             </TableRow>
           ))}

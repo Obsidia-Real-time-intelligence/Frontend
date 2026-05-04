@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +14,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { fmtPct, fmtUsd, timeAgo } from "@/lib/utils";
-import { MOCK_TRADES } from "@/lib/mock";
+import { useTrades } from "@/lib/api";
 
 export default function TradesPage() {
-  const trades = MOCK_TRADES;
-  const wins = trades.filter((t) => t.pnl_usd > 0);
-  const total = trades.reduce((s, t) => s + t.pnl_usd, 0);
+  const { data: trades = [], isLoading } = useTrades();
+  const closedTrades = trades.filter((t) => t.closed_at !== null && t.pnl_usd !== null);
+  const wins = closedTrades.filter((t) => (t.pnl_usd ?? 0) > 0);
+  const total = closedTrades.reduce((s, t) => s + (t.pnl_usd ?? 0), 0);
 
   return (
     <>
@@ -72,53 +74,77 @@ export default function TradesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {trades.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell>
-                        <Badge
-                          variant={t.side === "long" ? "success" : "danger"}
-                        >
-                          {t.side.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>${t.entry_price.toFixed(2)}</TableCell>
-                      <TableCell>${t.exit_price.toFixed(2)}</TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${
-                          t.pnl_usd >= 0
-                            ? "text-[var(--color-success)]"
-                            : "text-[var(--color-danger)]"
-                        }`}
-                      >
-                        {fmtUsd(t.pnl_usd, true)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right ${
-                          t.pnl_pct >= 0
-                            ? "text-[var(--color-success)]"
-                            : "text-[var(--color-danger)]"
-                        }`}
-                      >
-                        {fmtPct(t.pnl_pct)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            t.exit_reason === "tp"
-                              ? "success"
-                              : t.exit_reason === "sl"
-                                ? "danger"
-                                : "default"
-                          }
-                        >
-                          {t.exit_reason}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-[var(--color-muted-foreground)]">
-                        {timeAgo(t.exit_time)}
+                  {trades.length === 0 && !isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12 text-[var(--color-muted-foreground)]">
+                        No trades yet. Save a strategy and toggle it live to start populating this ledger.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
+                  {trades.map((t) => {
+                    const pnlUsd = t.pnl_usd ?? 0;
+                    const pnlPct = t.pnl_pct ?? 0;
+                    const isOpen = t.closed_at === null;
+                    return (
+                      <TableRow key={t.id}>
+                        <TableCell>
+                          <Badge variant={t.side === "long" ? "success" : "danger"}>
+                            {t.side.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>${t.entry_price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {t.exit_price !== null
+                            ? `$${t.exit_price.toFixed(2)}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-medium ${
+                            isOpen
+                              ? "text-[var(--color-muted-foreground)]"
+                              : pnlUsd >= 0
+                                ? "text-[var(--color-success)]"
+                                : "text-[var(--color-danger)]"
+                          }`}
+                        >
+                          {isOpen ? "open" : fmtUsd(pnlUsd, true)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right ${
+                            isOpen
+                              ? "text-[var(--color-muted-foreground)]"
+                              : pnlPct >= 0
+                                ? "text-[var(--color-success)]"
+                                : "text-[var(--color-danger)]"
+                          }`}
+                        >
+                          {isOpen ? "—" : fmtPct(pnlPct)}
+                        </TableCell>
+                        <TableCell>
+                          {t.exit_reason ? (
+                            <Badge
+                              variant={
+                                t.exit_reason === "tp"
+                                  ? "success"
+                                  : t.exit_reason === "sl"
+                                    ? "danger"
+                                    : "default"
+                              }
+                            >
+                              {t.exit_reason}
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-[var(--color-muted-foreground)] uppercase tracking-wider">
+                              live
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-[var(--color-muted-foreground)]">
+                          {timeAgo(t.closed_at ?? t.opened_at)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

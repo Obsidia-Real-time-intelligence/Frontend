@@ -10,34 +10,22 @@ import { TVAdvanced } from "@/components/charts/tv-advanced";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useKpis, useAlerts, useStrategies } from "@/lib/api";
+import { useLivePrices } from "@/lib/live-prices";
+import { useSrZones } from "@/lib/api";
 import { mockEquityCurve } from "@/lib/mock";
 import { fmtPct, fmtUsd } from "@/lib/utils";
-
-// Live SOL stats — would come from a real ticker API in production.
-const SOL_LIVE = {
-  price: 84.06,
-  change_5m: -0.03,
-  change_1h: -0.05,
-  change_6h: 0.22,
-  change_24h: -0.72,
-  mc: "48.3B",
-  fdv: "52.5B",
-  liquidity: "707M",
-  volume_24h: "14.1B",
-  holders: "3.82M",
-};
-
-const SR = [
-  { kind: "resistance" as const, price: 86.76, touches: 14 },
-  { kind: "resistance" as const, price: 85.74, touches: 13 },
-  { kind: "support" as const, price: 83.73, touches: 11 },
-  { kind: "support" as const, price: 82.76, touches: 10 },
-];
 
 export default function DashboardPage() {
   const { data: kpis, isLoading: kpisLoading } = useKpis();
   const { data: alerts = [] } = useAlerts(5);
   const { data: strategies = [] } = useStrategies();
+  const { data: srZones = [] } = useSrZones("SOL/USDT", "15m");
+
+  // Live ticks for SOL + BTC + ETH
+  const ticks = useLivePrices(["SOL/USDT", "BTC/USDT", "ETH/USDT"]);
+  const sol = ticks["SOL/USDT"];
+  const btc = ticks["BTC/USDT"];
+  const eth = ticks["ETH/USDT"];
 
   const k = kpis ?? {
     total_strategies: 0,
@@ -47,7 +35,9 @@ export default function DashboardPage() {
   };
 
   const equity = mockEquityCurve(90, 8500);
-  const isUp24h = SOL_LIVE.change_24h >= 0;
+  const solPrice = sol?.price ?? 0;
+  const solChange24h = sol?.change_24h_pct ?? 0;
+  const isUp24h = solChange24h >= 0;
 
   return (
     <>
@@ -109,22 +99,31 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-baseline gap-2 ml-2 tabular">
             <span className="text-xl font-semibold">
-              ${SOL_LIVE.price.toFixed(2)}
+              {sol ? `$${solPrice.toFixed(2)}` : "—"}
             </span>
-            <span
-              className={`text-xs font-medium flex items-center gap-1 ${
-                isUp24h
-                  ? "text-[var(--color-success)]"
-                  : "text-[var(--color-danger)]"
-              }`}
-            >
-              {isUp24h ? (
-                <TrendingUp className="size-3" />
-              ) : (
-                <TrendingDown className="size-3" />
-              )}
-              {fmtPct(SOL_LIVE.change_24h)} <span className="text-[var(--color-muted-foreground)] font-normal">24h</span>
-            </span>
+            {sol && (
+              <span
+                className={`text-xs font-medium flex items-center gap-1 ${
+                  isUp24h
+                    ? "text-[var(--color-success)]"
+                    : "text-[var(--color-danger)]"
+                }`}
+              >
+                {isUp24h ? (
+                  <TrendingUp className="size-3" />
+                ) : (
+                  <TrendingDown className="size-3" />
+                )}
+                {fmtPct(solChange24h)}{" "}
+                <span className="text-[var(--color-muted-foreground)] font-normal">24h</span>
+              </span>
+            )}
+            {!sol && (
+              <span className="text-xs text-[var(--color-muted-foreground)] flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                connecting…
+              </span>
+            )}
           </div>
           <Button asChild variant="ghost" size="sm" className="ml-auto">
             <Link href={`/app/markets/${encodeURIComponent("SOL/USDT")}`}>
@@ -142,65 +141,104 @@ export default function DashboardPage() {
 
           {/* Right info rail */}
           <aside className="col-span-12 lg:col-span-3 p-4 space-y-5 bg-[var(--color-surface)]">
-            {/* Stats grid */}
+            {/* Live stats from WebSocket */}
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <Stat label="MC" value={`$${SOL_LIVE.mc}`} />
-              <Stat label="FDV" value={`$${SOL_LIVE.fdv}`} />
-              <Stat label="Liquidity" value={`$${SOL_LIVE.liquidity}`} />
-              <Stat label="Holders" value={SOL_LIVE.holders} />
               <Stat
-                label="24h Vol"
-                value={`$${SOL_LIVE.volume_24h}`}
+                label="24h High"
+                value={sol ? `$${sol.high_24h.toFixed(2)}` : "—"}
+              />
+              <Stat
+                label="24h Low"
+                value={sol ? `$${sol.low_24h.toFixed(2)}` : "—"}
+              />
+              <Stat
+                label="24h Open"
+                value={sol ? `$${sol.open_24h.toFixed(2)}` : "—"}
+              />
+              <Stat
+                label="24h Range"
+                value={
+                  sol
+                    ? `$${(sol.high_24h - sol.low_24h).toFixed(2)}`
+                    : "—"
+                }
+              />
+              <Stat
+                label="24h Volume (SOL)"
+                value={
+                  sol
+                    ? `${(sol.volume_24h / 1000).toFixed(1)}k`
+                    : "—"
+                }
                 className="col-span-2"
               />
             </div>
 
-            {/* Change blocks */}
+            {/* Live change vs open */}
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)] mb-1.5">
-                Change
+                24h Change
               </div>
-              <div className="grid grid-cols-4 gap-1">
-                <ChangeBlock label="5m" value={SOL_LIVE.change_5m} />
-                <ChangeBlock label="1h" value={SOL_LIVE.change_1h} />
-                <ChangeBlock label="6h" value={SOL_LIVE.change_6h} />
-                <ChangeBlock label="24h" value={SOL_LIVE.change_24h} />
+              <div className="grid grid-cols-3 gap-1">
+                <ChangeBlock label="vs Open" value={sol ? solChange24h : 0} />
+                <ChangeBlock
+                  label="vs Low"
+                  value={
+                    sol && sol.low_24h > 0
+                      ? ((sol.price - sol.low_24h) / sol.low_24h) * 100
+                      : 0
+                  }
+                />
+                <ChangeBlock
+                  label="vs High"
+                  value={
+                    sol && sol.high_24h > 0
+                      ? ((sol.price - sol.high_24h) / sol.high_24h) * 100
+                      : 0
+                  }
+                />
               </div>
             </div>
 
-            {/* S/R */}
+            {/* S/R from sr_zones table */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
                   S/R levels (15m)
                 </span>
-                <Badge variant="outline">{SR.length}</Badge>
+                <Badge variant="outline">{srZones.length}</Badge>
               </div>
-              <ul className="space-y-1">
-                {SR.map((l, i) => (
-                  <li
-                    key={i}
-                    className={`flex items-center justify-between text-xs px-2 py-1 rounded-md ${
-                      l.kind === "resistance"
-                        ? "bg-[var(--color-danger)]/5"
-                        : "bg-[var(--color-success)]/5"
-                    }`}
-                  >
-                    <span
-                      className={`tabular font-medium ${
+              {srZones.length === 0 ? (
+                <p className="text-[11px] text-[var(--color-muted-foreground)] py-2">
+                  Computing — refreshes hourly via worker.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {srZones.slice(0, 6).map((l, i) => (
+                    <li
+                      key={i}
+                      className={`flex items-center justify-between text-xs px-2 py-1 rounded-md ${
                         l.kind === "resistance"
-                          ? "text-[var(--color-danger)]"
-                          : "text-[var(--color-success)]"
+                          ? "bg-[var(--color-danger)]/5"
+                          : "bg-[var(--color-success)]/5"
                       }`}
                     >
-                      ${l.price.toFixed(2)}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                      {l.kind[0].toUpperCase()} ×{l.touches}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                      <span
+                        className={`tabular font-medium ${
+                          l.kind === "resistance"
+                            ? "text-[var(--color-danger)]"
+                            : "text-[var(--color-success)]"
+                        }`}
+                      >
+                        ${Number(l.center).toFixed(2)}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                        {l.kind[0].toUpperCase()} ×{l.touches}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* AI brief */}

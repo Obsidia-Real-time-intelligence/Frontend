@@ -271,6 +271,27 @@ export function useBacktestResult(id: string | null | undefined) {
   });
 }
 
+/** Get the most recent full backtest result_json for a strategy. */
+export function useLatestBacktest(strategyId: string | null | undefined) {
+  return useQuery<BacktestResult | null>({
+    queryKey: ["backtests", "latest", strategyId],
+    queryFn: async () => {
+      if (!strategyId) return null;
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("backtests")
+        .select("result_json")
+        .eq("strategy_id", strategyId)
+        .order("ran_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.result_json as BacktestResult) ?? null;
+    },
+    enabled: !!strategyId,
+  });
+}
+
 /** List backtests for a saved strategy. */
 export function useBacktestsForStrategy(strategyId: string | null | undefined) {
   return useQuery({
@@ -291,7 +312,137 @@ export function useBacktestsForStrategy(strategyId: string | null | undefined) {
   });
 }
 
-// ── Marketplace (read-only public table) ──────────────────────────
+// ── S/R zones (populated hourly by sr_refresher worker) ──────────
+
+export interface SrZone {
+  id: string;
+  symbol: string;
+  timeframe: string;
+  kind: "support" | "resistance";
+  center: number;
+  low: number;
+  high: number;
+  touches: number;
+  score: number | null;
+  computed_at: string;
+}
+
+export function useSrZones(symbol: string, timeframe: string) {
+  return useQuery<SrZone[]>({
+    queryKey: ["sr-zones", symbol, timeframe],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("sr_zones")
+        .select("*")
+        .eq("symbol", symbol)
+        .eq("timeframe", timeframe)
+        .order("score", { ascending: false, nullsFirst: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []) as SrZone[];
+    },
+    refetchInterval: 60_000,
+  });
+}
+
+// ── Leaderboard (Supabase view) ──────────────────────────────────
+
+export interface LeaderboardRow {
+  strategy_id: string;
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  creator: string;
+  creator_avatar: string | null;
+  creator_verified: boolean;
+  strategy_verified: boolean;
+  return_pct_30d: number | null;
+  win_rate: number | null;
+  sharpe: number | null;
+  max_drawdown_pct: number | null;
+  trade_count: number | null;
+  subscribers: number;
+  price_usd_monthly: number | null;
+  last_fired_at: string | null;
+  created_at: string;
+}
+
+export function useLeaderboard() {
+  return useQuery<LeaderboardRow[]>({
+    queryKey: ["leaderboard"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("leaderboard_strategies")
+        .select("*")
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as LeaderboardRow[];
+    },
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+// ── Trades (paper-trade ledger) ──────────────────────────────────
+
+export interface PaperTrade {
+  id: string;
+  strategy_id: string | null;
+  symbol: string;
+  side: "long" | "short";
+  entry_price: number;
+  exit_price: number | null;
+  pnl_usd: number | null;
+  pnl_pct: number | null;
+  exit_reason: "tp" | "sl" | "time" | "manual" | null;
+  is_live: boolean;
+  opened_at: string;
+  closed_at: string | null;
+}
+
+export function useTrades(strategyId?: string) {
+  return useQuery<PaperTrade[]>({
+    queryKey: ["trades", strategyId ?? "all"],
+    queryFn: async () => {
+      const supabase = createClient();
+      let q = supabase
+        .from("trades_paper")
+        .select("*")
+        .order("opened_at", { ascending: false })
+        .limit(100);
+      if (strategyId) q = q.eq("strategy_id", strategyId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as PaperTrade[];
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+// ── Marketplace — backed by leaderboard_strategies view ────────────
+// Public strategies surface via the leaderboard view (which already joins
+// strategies + profiles + subscriber count). We adapt the row shape to
+// the MarketplaceStrategy interface the UI expects.
+
+function leaderRowToMarketplaceStrategy(row: LeaderboardRow): MarketplaceStrategy {
+  return {
+    id: row.strategy_id,
+    name: row.strategy_name,
+    creator: row.creator,
+    creator_avatar: row.creator_avatar ?? undefined,
+    description: "", // strategy descriptions not yet exposed in view
+    return_pct_30d: row.return_pct_30d ?? 0,
+    return_pct_total: row.return_pct_30d ?? 0,
+    risk_score: row.max_drawdown_pct
+      ? Math.min(10, Math.max(1, Math.round(row.max_drawdown_pct / 3)))
+      : 5,
+    subscribers: row.subscribers,
+    price_usd_monthly: row.price_usd_monthly ?? 0,
+    symbols: [row.symbol],
+    timeframe: row.timeframe as MarketplaceStrategy["timeframe"],
+  };
+}
 
 export function useMarketplace() {
   return useQuery<MarketplaceStrategy[]>({
@@ -299,12 +450,13 @@ export function useMarketplace() {
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("marketplace_strategies")
+        .from("leaderboard_strategies")
         .select("*")
         .order("subscribers", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as MarketplaceStrategy[];
+      return (data ?? []).map((r) => leaderRowToMarketplaceStrategy(r as LeaderboardRow));
     },
+    refetchInterval: 60_000,
   });
 }
 
@@ -314,12 +466,12 @@ export function useMarketplaceStrategy(id: string) {
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("marketplace_strategies")
+        .from("leaderboard_strategies")
         .select("*")
-        .eq("id", id)
+        .eq("strategy_id", id)
         .maybeSingle();
       if (error) throw error;
-      return data as MarketplaceStrategy | null;
+      return data ? leaderRowToMarketplaceStrategy(data as LeaderboardRow) : null;
     },
     enabled: !!id,
   });
