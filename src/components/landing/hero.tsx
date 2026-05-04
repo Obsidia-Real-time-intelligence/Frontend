@@ -13,6 +13,31 @@ export function Hero() {
         className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,black,transparent)]"
       />
 
+      {/* Light rays travelling along the grid lines */}
+      <div
+        aria-hidden
+        className="absolute inset-0 overflow-hidden [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,black,transparent)]"
+      >
+        <span className="ray-h" style={{ top: 64,  animationDuration: "11s", animationDelay: "0s"   }} />
+        <span className="ray-h" style={{ top: 128, animationDuration: "9s",  animationDelay: "2s"   }} />
+        <span className="ray-h" style={{ top: 192, animationDuration: "13s", animationDelay: "1s"   }} />
+        <span className="ray-h" style={{ top: 256, animationDuration: "10s", animationDelay: "4s"   }} />
+        <span className="ray-h" style={{ top: 320, animationDuration: "14s", animationDelay: "3s"   }} />
+        <span className="ray-h" style={{ top: 384, animationDuration: "8s",  animationDelay: "5.5s" }} />
+        <span className="ray-h" style={{ top: 448, animationDuration: "12s", animationDelay: "0.5s" }} />
+        <span className="ray-h" style={{ top: 512, animationDuration: "11s", animationDelay: "6s"   }} />
+        <span className="ray-h" style={{ top: 576, animationDuration: "9s",  animationDelay: "2.5s" }} />
+        <span className="ray-v" style={{ left: 192,  animationDuration: "10s", animationDelay: "0s"   }} />
+        <span className="ray-v" style={{ left: 384,  animationDuration: "13s", animationDelay: "2.5s" }} />
+        <span className="ray-v" style={{ left: 576,  animationDuration: "11s", animationDelay: "1.2s" }} />
+        <span className="ray-v" style={{ left: 768,  animationDuration: "9s",  animationDelay: "4s"   }} />
+        <span className="ray-v" style={{ left: 960,  animationDuration: "14s", animationDelay: "1.8s" }} />
+        <span className="ray-v" style={{ left: 1152, animationDuration: "12s", animationDelay: "3.5s" }} />
+        <span className="ray-v" style={{ left: 1344, animationDuration: "10s", animationDelay: "0.8s" }} />
+        <span className="ray-v" style={{ left: 1536, animationDuration: "13s", animationDelay: "5s"   }} />
+        <span className="ray-v" style={{ left: 1728, animationDuration: "11s", animationDelay: "2s"   }} />
+      </div>
+
       <div className="relative mx-auto max-w-6xl px-4 pt-20 pb-24 sm:pt-28 sm:pb-32">
         <div className="flex flex-col items-start gap-6 max-w-3xl">
           <Badge variant="primary" className="text-[10px]">
