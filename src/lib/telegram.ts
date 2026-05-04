@@ -41,7 +41,8 @@ export async function sendTelegram(
 }
 
 export async function notifyAdmin(text: string): Promise<boolean> {
-  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+  const chatId =
+    process.env.TELEGRAM_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
   if (!chatId) return false;
   return sendTelegram(chatId, text);
 }

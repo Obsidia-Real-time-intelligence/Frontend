@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CommunityLinks } from "@/components/shell/community-links";
 import { createClient } from "@/lib/supabase/client";
 import { Bell, LogOut, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,8 @@ export function TopBar({
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <CommunityLinks compact />
+        <div className="hidden sm:block w-px h-5 bg-[var(--color-border)] mx-1" />
         <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
           <Bell className="size-4" />
           {unreadAlerts > 0 && (

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleButton } from "@/components/auth/google-button";
-import { Check, Loader2, ArrowLeft } from "lucide-react";
+import { Check, Loader2, ArrowLeft, Send, MessageCircle } from "lucide-react";
 
 type State = "idle" | "submitting" | "success" | "error";
 
@@ -123,8 +123,12 @@ export default function WaitlistPage() {
 }
 
 function SuccessCard({ email }: { email: string }) {
+  const tg = process.env.NEXT_PUBLIC_TELEGRAM_INVITE;
+  const dc = process.env.NEXT_PUBLIC_DISCORD_INVITE;
+  const hasCommunity = Boolean(tg || dc);
+
   return (
-    <div className="rounded-xl border border-[var(--color-success)]/30 bg-[var(--color-card)] p-8 text-center space-y-4 shadow-sm">
+    <div className="rounded-xl border border-[var(--color-success)]/30 bg-[var(--color-card)] p-8 text-center space-y-5 shadow-sm">
       <div className="mx-auto grid size-12 place-items-center rounded-full bg-[var(--color-success)]/10 border border-[var(--color-success)]/30">
         <Check className="size-6 text-[var(--color-success)]" />
       </div>
@@ -137,6 +141,42 @@ function SuccessCard({ email }: { email: string }) {
           you're cleared in.
         </p>
       </div>
+
+      {hasCommunity && (
+        <div className="pt-4 border-t border-[var(--color-border)] space-y-3 text-left">
+          <p className="text-xs uppercase tracking-wider text-[var(--color-muted-foreground)] text-center">
+            Join the community while you wait
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {tg && (
+              <a
+                href={tg}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 h-10 rounded-md bg-[#229ED9] hover:bg-[#1e8ec2] text-white text-sm font-medium transition-colors"
+              >
+                <Send className="size-4" />
+                Join Telegram
+              </a>
+            )}
+            {dc && (
+              <a
+                href={dc}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 h-10 rounded-md bg-[#5865F2] hover:bg-[#4752c4] text-white text-sm font-medium transition-colors"
+              >
+                <MessageCircle className="size-4" />
+                Join Discord
+              </a>
+            )}
+          </div>
+          <p className="text-[11px] text-[var(--color-muted-foreground)] text-center leading-relaxed">
+            Trade ideas, strategy walkthroughs, and early access drop here first.
+          </p>
+        </div>
+      )}
+
       <div className="pt-2">
         <Link
           href="/"

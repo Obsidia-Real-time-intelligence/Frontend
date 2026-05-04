@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/shell/logo";
 import { Button } from "@/components/ui/button";
+import { CommunityLinks } from "@/components/shell/community-links";
 
 export function MarketingNav() {
   return (
@@ -26,6 +27,8 @@ export function MarketingNav() {
           </Link>
         </nav>
         <div className="flex items-center gap-2">
+          <CommunityLinks />
+          <div className="hidden sm:block w-px h-5 bg-[var(--color-border)] mx-1" />
           <Button asChild variant="ghost" size="sm">
             <Link href="/login">Sign in</Link>
           </Button>
