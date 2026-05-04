@@ -107,18 +107,21 @@ function AlertsList({ alerts }: { alerts: Alert[] }) {
 
                 <div className="col-span-2 tabular text-xs">
                   <Row k="Trigger" v={`$${a.price.toFixed(2)}`} />
-                  <Row k="Entry" v={`$${a.suggested_entry.toFixed(2)}`} />
+                  <Row
+                    k="Entry"
+                    v={a.suggested_entry != null ? `$${a.suggested_entry.toFixed(2)}` : "—"}
+                  />
                 </div>
 
                 <div className="col-span-2 tabular text-xs">
                   <Row
                     k="Stop"
-                    v={`$${a.suggested_sl.toFixed(2)}`}
+                    v={a.suggested_sl != null ? `$${a.suggested_sl.toFixed(2)}` : "—"}
                     color="text-[var(--color-danger)]"
                   />
                   <Row
                     k="Target"
-                    v={`$${a.suggested_tp.toFixed(2)}`}
+                    v={a.suggested_tp != null ? `$${a.suggested_tp.toFixed(2)}` : "—"}
                     color="text-[var(--color-success)]"
                   />
                 </div>

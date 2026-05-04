@@ -129,6 +129,87 @@ export function useCreateStrategy() {
   });
 }
 
+/**
+ * Persist a backtest result for an existing strategy. Use after the
+ * "create + backtest" flow saves the strategy row, since the initial
+ * backtest ran without a strategy_id and so wasn't auto-persisted by the
+ * server. Inserts the backtests row and updates the parent strategy's
+ * aggregate stats so the detail page renders.
+ */
+export function useSaveBacktestForStrategy() {
+  const qc = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    { strategyId: string; dsl: StrategyDSL; result: BacktestResult }
+  >({
+    mutationFn: async ({ strategyId, dsl, result }) => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+
+      const { error: btErr } = await supabase.from("backtests").insert({
+        user_id: user.id,
+        strategy_id: strategyId,
+        params_json: dsl,
+        result_json: result,
+      });
+      if (btErr) throw btErr;
+
+      const { error: aggErr } = await supabase
+        .from("strategies")
+        .update({
+          return_pct: result.total_pnl_pct,
+          win_rate: result.win_rate,
+          sharpe: result.sharpe,
+          max_drawdown_pct: result.max_drawdown_pct,
+          trade_count: result.trades,
+          last_backtest_at: new Date().toISOString(),
+        })
+        .eq("id", strategyId);
+      if (aggErr) throw aggErr;
+    },
+    onSuccess: (_, { strategyId }) => {
+      qc.invalidateQueries({ queryKey: ["strategies", strategyId] });
+      qc.invalidateQueries({ queryKey: ["backtests", "latest", strategyId] });
+      qc.invalidateQueries({ queryKey: ["backtests", "for-strategy", strategyId] });
+    },
+  });
+}
+
+export function useUpdateStrategy() {
+  const qc = useQueryClient();
+  return useMutation<
+    Strategy,
+    Error,
+    { id: string; name: string; description: string | null; dsl: StrategyDSL }
+  >({
+    mutationFn: async ({ id, name, description, dsl }) => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("strategies")
+        .update({
+          name,
+          description,
+          symbol: dsl.symbol,
+          timeframe: dsl.timeframe,
+          dsl_json: dsl,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Strategy;
+    },
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ["strategies"] });
+      qc.invalidateQueries({ queryKey: ["strategies", id] });
+    },
+  });
+}
+
 export function useUpdateStrategyStatus() {
   const qc = useQueryClient();
   return useMutation<
@@ -147,6 +228,25 @@ export function useUpdateStrategyStatus() {
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ["strategies"] });
       qc.invalidateQueries({ queryKey: ["strategies", id] });
+    },
+  });
+}
+
+export function useUpdateStrategyVisibility() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, { id: string; is_public: boolean }>({
+    mutationFn: async ({ id, is_public }) => {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("strategies")
+        .update({ is_public })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ["strategies"] });
+      qc.invalidateQueries({ queryKey: ["strategies", id] });
+      qc.invalidateQueries({ queryKey: ["marketplace"] });
     },
   });
 }

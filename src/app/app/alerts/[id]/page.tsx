@@ -62,9 +62,16 @@ export default function AlertDetailPage({
   const Arrow = isLong ? ArrowUpRight : ArrowDownRight;
   const tvSymbol = SYMBOL_TO_TV[alert.symbol] ?? "BINANCE:SOLUSDT";
 
-  const rr =
-    Math.abs(alert.suggested_tp - alert.suggested_entry) /
-    Math.abs(alert.suggested_entry - alert.suggested_sl);
+  const hasLevels =
+    alert.suggested_entry != null &&
+    alert.suggested_sl != null &&
+    alert.suggested_tp != null;
+  const rr = hasLevels
+    ? Math.abs(alert.suggested_tp! - alert.suggested_entry!) /
+      Math.abs(alert.suggested_entry! - alert.suggested_sl!)
+    : null;
+  const fmt = (v: number | null | undefined) =>
+    v != null ? `$${v.toFixed(2)}` : "—";
 
   return (
     <>
@@ -105,9 +112,11 @@ export default function AlertDetailPage({
         >
           AI {alert.ai_confidence}/10
         </Badge>
-        <span className="text-xs text-[var(--color-muted-foreground)] ml-2">
-          R:R = {rr.toFixed(2)}
-        </span>
+        {rr != null && (
+          <span className="text-xs text-[var(--color-muted-foreground)] ml-2">
+            R:R = {rr.toFixed(2)}
+          </span>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-4">
@@ -135,29 +144,25 @@ export default function AlertDetailPage({
               Suggested trade
             </div>
             <div className="text-3xl font-semibold tabular tracking-tight">
-              ${alert.suggested_entry.toFixed(2)}
+              {fmt(alert.suggested_entry)}
             </div>
 
             <div className="mt-5 space-y-3 border-t border-[var(--color-border)] pt-4 text-sm">
               <Param label="Direction" value={alert.side.toUpperCase()} mono />
-              <Param
-                label="Entry"
-                value={`$${alert.suggested_entry.toFixed(2)}`}
-                mono
-              />
+              <Param label="Entry" value={fmt(alert.suggested_entry)} mono />
               <Param
                 label="Stop loss"
-                value={`$${alert.suggested_sl.toFixed(2)}`}
+                value={fmt(alert.suggested_sl)}
                 color="text-[var(--color-danger)]"
                 mono
               />
               <Param
                 label="Take profit"
-                value={`$${alert.suggested_tp.toFixed(2)}`}
+                value={fmt(alert.suggested_tp)}
                 color="text-[var(--color-success)]"
                 mono
               />
-              <Param label="R:R" value={rr.toFixed(2)} mono />
+              <Param label="R:R" value={rr != null ? rr.toFixed(2) : "—"} mono />
               <Param
                 label="Trigger price"
                 value={`$${alert.price.toFixed(2)}`}
@@ -174,7 +179,7 @@ export default function AlertDetailPage({
                 Execute on Drift
               </Button>
               <CopyButton
-                text={`${alert.side.toUpperCase()} ${alert.symbol} @ $${alert.suggested_entry.toFixed(2)} | SL $${alert.suggested_sl.toFixed(2)} | TP $${alert.suggested_tp.toFixed(2)}`}
+                text={`${alert.side.toUpperCase()} ${alert.symbol} @ ${fmt(alert.suggested_entry)} | SL ${fmt(alert.suggested_sl)} | TP ${fmt(alert.suggested_tp)}`}
               />
             </div>
           </div>

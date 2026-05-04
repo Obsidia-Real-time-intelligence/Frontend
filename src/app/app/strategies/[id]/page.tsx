@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { use } from "react";
-import { ArrowLeft, Pause, Play, Edit, Trash2, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Pause,
+  Play,
+  Edit,
+  Trash2,
+  Loader2,
+  Globe,
+  Lock,
+} from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { EquityCurve } from "@/components/charts/equity-curve";
@@ -22,6 +31,7 @@ import {
   useTrades,
   useLatestBacktest,
   useUpdateStrategyStatus,
+  useUpdateStrategyVisibility,
   useDeleteStrategy,
 } from "@/lib/api";
 
@@ -35,6 +45,7 @@ export default function StrategyDetailPage({
   const { data: trades = [] } = useTrades(id);
   const { data: backtest } = useLatestBacktest(id);
   const updateStatus = useUpdateStrategyStatus();
+  const updateVisibility = useUpdateStrategyVisibility();
   const deleteStrat = useDeleteStrategy();
 
   if (isLoading) {
@@ -77,6 +88,14 @@ export default function StrategyDetailPage({
     });
   }
 
+  async function toggleVisibility() {
+    if (!strategy) return;
+    await updateVisibility.mutateAsync({
+      id: strategy.id,
+      is_public: !strategy.is_public,
+    });
+  }
+
   async function handleDelete() {
     if (!strategy) return;
     if (!confirm(`Delete "${strategy.name}"? This cannot be undone.`)) return;
@@ -112,6 +131,29 @@ export default function StrategyDetailPage({
                 <>
                   <Play className="size-4" />
                   Activate
+                </>
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={toggleVisibility}
+              disabled={updateVisibility.isPending}
+              title={
+                strategy.is_public
+                  ? "Public — visible on the marketplace"
+                  : "Private — only you can see this"
+              }
+            >
+              {strategy.is_public ? (
+                <>
+                  <Globe className="size-4" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock className="size-4" />
+                  Private
                 </>
               )}
             </Button>

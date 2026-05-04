@@ -18,11 +18,14 @@ export interface Strategy {
   dsl_json: StrategyDSL;
   created_at: string;
   last_fired_at?: string | null;
+  is_public?: boolean;
+  is_verified?: boolean;
   // aggregate stats from latest backtest
   return_pct?: number;
   win_rate?: number;
   sharpe?: number;
   max_drawdown_pct?: number;
+  trade_count?: number;
 }
 
 export interface StrategyDSL {
