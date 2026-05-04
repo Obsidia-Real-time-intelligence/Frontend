@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useKpis, useAlerts, useStrategies, useTrades } from "@/lib/api";
 import { useLivePrices } from "@/lib/live-prices";
 import { useSrZones } from "@/lib/api";
+import { BotPerformance } from "@/components/dashboard/bot-performance";
 import { fmtPct, fmtUsd } from "@/lib/utils";
 
 const STARTING_EQUITY = 8500;
@@ -286,6 +287,25 @@ export default function DashboardPage() {
             </div>
           </aside>
         </div>
+      </div>
+
+      {/* Bot performance — real-time data from FastAPI orchestrator */}
+      <div className="mt-6">
+        <div className="flex items-end justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight">
+              Bot performance
+            </h2>
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              Live confluence, scoreboard, and execution stats from the running orchestrator.
+            </p>
+          </div>
+          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
+            <span className="size-1.5 rounded-full bg-[var(--color-success)] animate-pulse" />
+            Updates every 15s
+          </span>
+        </div>
+        <BotPerformance />
       </div>
 
       {/* Strategy performance + AI morning brief */}

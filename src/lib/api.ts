@@ -206,9 +206,107 @@ export function useAlert(id: string) {
   });
 }
 
-// ── Backtests — POST to FastAPI; backend persists to Supabase ────────────
+// ── FastAPI integration — real data from the running orchestrator ───────
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json() as Promise<T>;
+}
+
+// ── Bot scoreboard (Rule-Based vs AI Trader head-to-head) ───────────────
+
+export interface BotScoreboardSide {
+  name: string;
+  balance_sol: number;
+  return_pct: number;
+  total_trades: number;
+  win_rate: number;
+}
+
+export interface BotScoreboard {
+  leader: "rules" | "ai" | "tied";
+  lead_margin_pct: number;
+  rules: BotScoreboardSide;
+  ai: BotScoreboardSide;
+}
+
+export function useBotScoreboard() {
+  return useQuery<BotScoreboard>({
+    queryKey: ["bot", "scoreboard"],
+    queryFn: () => apiGet<BotScoreboard>("/api/scoreboard"),
+    refetchInterval: 30_000,
+  });
+}
+
+// ── Bot status (confluence score, tier, AI analysis) ────────────────────
+
+export interface BotStatus {
+  score: number;
+  tier: "green" | "yellow" | "orange" | "red";
+  direction: "long" | "short" | "neutral";
+  active_signals: Array<{ name: string; score: number; details?: string }>;
+  ticker: { last?: number; change_24h?: number } | null;
+  last_update: string | null;
+  mtf: Record<string, unknown>;
+  ai_analysis: {
+    direction?: string;
+    confidence_pct?: number;
+    rationale?: string;
+    [key: string]: unknown;
+  } | null;
+}
+
+export function useBotStatus() {
+  return useQuery<BotStatus>({
+    queryKey: ["bot", "status"],
+    queryFn: () => apiGet<BotStatus>("/api/status"),
+    refetchInterval: 15_000,
+  });
+}
+
+// ── Spike strategy live stats ────────────────────────────────────────────
+
+export interface SpikeStats {
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl_sol: number;
+  total_pnl_usd: number;
+  has_position: boolean;
+  current_price: number;
+  running_high: number;
+}
+
+export function useSpikeStats() {
+  return useQuery<SpikeStats>({
+    queryKey: ["bot", "spike"],
+    queryFn: () => apiGet<SpikeStats>("/api/spike"),
+    refetchInterval: 15_000,
+  });
+}
+
+// ── MR strategy live stats ───────────────────────────────────────────────
+
+export interface MrStats {
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl_usdc: number;
+  has_position: boolean;
+}
+
+export function useMrStats() {
+  return useQuery<MrStats>({
+    queryKey: ["bot", "mr"],
+    queryFn: () => apiGet<MrStats>("/api/mr"),
+    refetchInterval: 15_000,
+  });
+}
 
 export interface BacktestRunArgs {
   dsl: StrategyDSL;
