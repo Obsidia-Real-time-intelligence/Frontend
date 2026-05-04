@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Users, Search } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Search, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fmtPct } from "@/lib/utils";
 import { useMarketplace } from "@/lib/api";
-import { MOCK_MARKETPLACE } from "@/lib/mock";
 import type { MarketplaceStrategy } from "@/lib/types";
 
 export default function MarketplacePage() {
-  const { data: live = [], isLoading } = useMarketplace();
-  // Fall back to mock so the page demos until the table is populated.
-  const strategies = live.length > 0 ? live : MOCK_MARKETPLACE;
+  const { data: strategies = [], isLoading } = useMarketplace();
 
   return (
     <>
@@ -43,11 +40,31 @@ export default function MarketplacePage() {
         </Tabs>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {strategies.map((s) => (
-          <MarketplaceCard key={s.id} s={s} />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="flex items-center justify-center py-16 text-[var(--color-muted-foreground)]">
+          <Loader2 className="size-4 animate-spin mr-2" />
+          <span className="text-sm">Loading marketplace…</span>
+        </div>
+      )}
+
+      {!isLoading && strategies.length === 0 && (
+        <div className="rounded-lg border border-dashed border-[var(--color-border)] py-16 text-center">
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            No public strategies yet. The marketplace fills as creators publish strategies.
+          </p>
+          <Button asChild size="sm" className="mt-4">
+            <Link href="/app/strategies/new">Create one</Link>
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && strategies.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {strategies.map((s) => (
+            <MarketplaceCard key={s.id} s={s} />
+          ))}
+        </div>
+      )}
     </>
   );
 }

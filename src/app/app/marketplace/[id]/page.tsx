@@ -2,14 +2,14 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Users, TrendingUp, Lock } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Users, TrendingUp, Lock, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { EquityCurve } from "@/components/charts/equity-curve";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fmtPct } from "@/lib/utils";
-import { MOCK_MARKETPLACE, mockEquityCurve } from "@/lib/mock";
+import { useMarketplaceStrategy, useLatestBacktest } from "@/lib/api";
 
 export default function MarketplaceStrategyDetailPage({
   params,
@@ -17,9 +17,38 @@ export default function MarketplaceStrategyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const strategy =
-    MOCK_MARKETPLACE.find((s) => s.id === id) ?? MOCK_MARKETPLACE[0];
-  const equity = mockEquityCurve(180, 10000);
+  const { data: strategy, isLoading } = useMarketplaceStrategy(id);
+  const { data: backtest } = useLatestBacktest(id);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-[var(--color-muted-foreground)]">
+        <Loader2 className="size-4 animate-spin mr-2" />
+        <span className="text-sm">Loading strategy…</span>
+      </div>
+    );
+  }
+
+  if (!strategy) {
+    return (
+      <div className="rounded-lg border border-dashed border-[var(--color-border)] py-16 text-center">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Strategy not found or no longer public.
+        </p>
+        <Button asChild size="sm" className="mt-4">
+          <Link href="/app/marketplace">
+            <ArrowLeft className="size-4" /> Back to marketplace
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const equity =
+    backtest?.equity_curve.map((p) => ({
+      t: p.t.slice(0, 10),
+      equity: p.equity,
+    })) ?? [];
 
   return (
     <>

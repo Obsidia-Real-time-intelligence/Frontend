@@ -9,23 +9,43 @@ import { EquityCurve } from "@/components/charts/equity-curve";
 import { TVAdvanced } from "@/components/charts/tv-advanced";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useKpis, useAlerts, useStrategies } from "@/lib/api";
+import { useKpis, useAlerts, useStrategies, useTrades } from "@/lib/api";
 import { useLivePrices } from "@/lib/live-prices";
 import { useSrZones } from "@/lib/api";
-import { mockEquityCurve } from "@/lib/mock";
 import { fmtPct, fmtUsd } from "@/lib/utils";
+
+const STARTING_EQUITY = 8500;
+
+/** Walk the trade ledger and produce a running-equity series. */
+function buildEquityCurve(
+  trades: Array<{ closed_at: string | null; pnl_usd: number | null }>
+): Array<{ t: string; equity: number }> {
+  const closed = trades
+    .filter((t) => t.closed_at !== null && t.pnl_usd !== null)
+    .sort(
+      (a, b) =>
+        new Date(a.closed_at!).getTime() - new Date(b.closed_at!).getTime()
+    );
+  if (closed.length === 0) return [];
+  const out: Array<{ t: string; equity: number }> = [];
+  let equity = STARTING_EQUITY;
+  for (const t of closed) {
+    equity += t.pnl_usd ?? 0;
+    out.push({ t: t.closed_at!.slice(0, 10), equity: Math.round(equity * 100) / 100 });
+  }
+  return out;
+}
 
 export default function DashboardPage() {
   const { data: kpis, isLoading: kpisLoading } = useKpis();
   const { data: alerts = [] } = useAlerts(5);
   const { data: strategies = [] } = useStrategies();
   const { data: srZones = [] } = useSrZones("SOL/USDT", "15m");
+  const { data: trades = [] } = useTrades();
 
   // Live ticks for SOL + BTC + ETH
   const ticks = useLivePrices(["SOL/USDT", "BTC/USDT", "ETH/USDT"]);
   const sol = ticks["SOL/USDT"];
-  const btc = ticks["BTC/USDT"];
-  const eth = ticks["ETH/USDT"];
 
   const k = kpis ?? {
     total_strategies: 0,
@@ -34,7 +54,7 @@ export default function DashboardPage() {
     paper_pnl_pct: 0,
   };
 
-  const equity = mockEquityCurve(90, 8500);
+  const equity = buildEquityCurve(trades);
   const solPrice = sol?.price ?? 0;
   const solChange24h = sol?.change_24h_pct ?? 0;
   const isUp24h = solChange24h >= 0;
@@ -277,12 +297,45 @@ export default function DashboardPage() {
                 Strategy performance
               </div>
               <div className="text-xs text-[var(--color-muted-foreground)]">
-                Combined paper equity · last 90 days
+                Combined paper equity ·{" "}
+                {equity.length === 0
+                  ? "no closed trades yet"
+                  : `${equity.length} closed trades`}
               </div>
             </div>
-            <Badge variant="success">+14.7% all-time</Badge>
+            {equity.length > 0 && (
+              <Badge
+                variant={
+                  equity[equity.length - 1].equity >= STARTING_EQUITY
+                    ? "success"
+                    : "danger"
+                }
+              >
+                {fmtPct(
+                  ((equity[equity.length - 1].equity - STARTING_EQUITY) /
+                    STARTING_EQUITY) *
+                    100
+                )}{" "}
+                all-time
+              </Badge>
+            )}
           </div>
-          <EquityCurve data={equity} height={260} tone="brand" />
+          {equity.length === 0 ? (
+            <div className="px-5 pb-8 pt-4 text-center">
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                Your equity curve appears here once your strategies start firing
+                and trades close.
+              </p>
+              <Button asChild size="sm" className="mt-4">
+                <Link href="/app/strategies/new">
+                  <Plus className="size-4" />
+                  Create your first strategy
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <EquityCurve data={equity} height={260} tone="brand" />
+          )}
         </div>
 
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-5 flex flex-col">

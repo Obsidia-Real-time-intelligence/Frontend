@@ -9,6 +9,7 @@ import {
   Sparkles,
   Copy,
   Check,
+  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { TVWidget } from "@/components/charts/tv-widget";
 import { useState } from "react";
 import { timeAgo } from "@/lib/utils";
-import { MOCK_ALERTS } from "@/lib/mock";
+import { useAlert } from "@/lib/api";
 
 const SYMBOL_TO_TV: Record<string, string> = {
   "SOL/USDT": "BINANCE:SOLUSDT",
@@ -31,7 +32,32 @@ export default function AlertDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const alert = MOCK_ALERTS.find((a) => a.id === id) ?? MOCK_ALERTS[0];
+  const { data: alert, isLoading } = useAlert(id);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-[var(--color-muted-foreground)]">
+        <Loader2 className="size-4 animate-spin mr-2" />
+        <span className="text-sm">Loading alert…</span>
+      </div>
+    );
+  }
+
+  if (!alert) {
+    return (
+      <div className="rounded-lg border border-dashed border-[var(--color-border)] py-16 text-center">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Alert not found.
+        </p>
+        <Button asChild size="sm" className="mt-4">
+          <Link href="/app/alerts">
+            <ArrowLeft className="size-4" /> Back to alerts
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
   const isLong = alert.side === "long";
   const Arrow = isLong ? ArrowUpRight : ArrowDownRight;
   const tvSymbol = SYMBOL_TO_TV[alert.symbol] ?? "BINANCE:SOLUSDT";
