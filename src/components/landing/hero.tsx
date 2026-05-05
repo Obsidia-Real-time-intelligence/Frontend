@@ -46,7 +46,7 @@ export function Hero() {
           </Badge>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-[1.05]">
-            The honest backtester
+            Strategy marketplace
             <br />
             for Solana traders.
           </h1>
