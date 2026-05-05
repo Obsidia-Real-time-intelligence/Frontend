@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Obsidia — Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital@1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F0E7;
+  --bg-warm: #EFE7D8;
+  --fg: #0F1620;
+  --muted: #6A7382;
+  --accent: #4865D7;
+  --accent-soft: #4865D71A;
+  --line: #D9D2C3;
+  --dark: #0F1620;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: #cdcabe;
+  color: var(--fg);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+.italic-serif { font-family: 'Source Serif 4', 'Times New Roman', serif; font-style: italic; font-weight: 400; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+.deck { padding: 40px 0; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+.slide {
+  width: 1440px;
+  height: 810px;
+  background: var(--bg);
+  position: relative;
+  padding: 56px 80px 64px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 28px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+
+.slide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.slide-header .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--fg); font-weight: 500; letter-spacing: 0.04em; text-transform: none; font-size: 13px; }
+.slide-header .brand .glyph { color: var(--fg); font-size: 16px; }
+
+.section-line { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+.section-line .num { color: var(--accent); font-weight: 500; }
+
+.headline {
+  font-size: 60px;
+  line-height: 1.04;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  margin-bottom: 28px;
+}
+.headline-md {
+  font-size: 50px;
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 28px;
+}
+.headline .accent { color: var(--accent); }
+.headline .ital { font-family: 'Source Serif 4', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+
+.lede {
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--fg);
+  max-width: 880px;
+  margin-bottom: 32px;
+}
+
+.slide-footer {
+  position: absolute;
+  bottom: 28px;
+  left: 80px;
+  right: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.slide-footer .tag { color: var(--muted); }
+.slide-footer .tag::before { content: "•"; color: var(--accent); margin-right: 8px; }
+
+.meta-grid {
+  position: absolute;
+  bottom: 64px;
+  left: 80px;
+  right: 80px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.meta-grid .meta .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.meta-grid .meta .value { font-size: 15px; color: var(--fg); }
+
+.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--line); }
+.kpi { }
+.kpi .num { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 56px; color: var(--accent); line-height: 1; margin-bottom: 16px; font-weight: 400; }
+.kpi .text { font-size: 15px; color: var(--fg); line-height: 1.5; max-width: 320px; }
+
+.problem-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 16px; }
+.problem-cell { background: rgba(255,255,255,0.5); border: 1px solid var(--line); padding: 18px 16px; min-height: 130px; }
+.problem-cell.tinted { background: rgba(232,180,150,0.18); }
+.problem-cell .head { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.problem-cell .body { font-size: 14px; line-height: 1.4; color: var(--fg); }
+.problem-cell.tinted .body { color: #6F4A2F; }
+
+.points-list { }
+.point { display: grid; grid-template-columns: 56px 1fr; gap: 24px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.point:last-child { border-bottom: none; }
+.point .num { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); padding-top: 4px; }
+.point .head { font-size: 19px; font-weight: 600; color: var(--fg); margin-bottom: 6px; }
+.point .body { font-size: 14px; color: var(--muted); line-height: 1.55; max-width: 540px; }
+
+.quote-card {
+  background: var(--dark);
+  color: #E6E1D5;
+  padding: 36px 36px 40px;
+  border-radius: 4px;
+  font-family: 'Source Serif 4', serif;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.45;
+}
+.quote-card .quote-em { color: #8FA3F0; }
+.quote-card .by { display: block; margin-top: 24px; font-family: 'JetBrains Mono', monospace; font-style: normal; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #B6B0A0; }
+
+.pillar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 16px; }
+.pillar-card { background: rgba(255,255,255,0.55); border: 1px solid var(--line); padding: 28px; min-height: 220px; }
+.pillar-card .kicker { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+.pillar-card .title { font-size: 22px; font-weight: 600; margin-bottom: 12px; line-height: 1.2; }
+.pillar-card .body { font-size: 14px; line-height: 1.55; color: var(--muted); }
+
+.steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: stretch; }
+.step-card { background: rgba(255,255,255,0.55); border: 1px solid var(--line); padding: 22px; position: relative; min-height: 240px; display: flex; flex-direction: column; }
+.step-card .kicker { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin-bottom: 14px; }
+.step-card .title { font-size: 19px; font-weight: 600; line-height: 1.2; margin-bottom: 10px; }
+.step-card .body { font-size: 13px; color: var(--muted); line-height: 1.55; flex: 1; }
+.step-card .footer-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.step-arrow { position: absolute; right: -10px; top: 50%; color: var(--muted); font-size: 18px; z-index: 2; transform: translateY(-50%); }
+
+.compounding {
+  margin-top: 18px;
+  background: rgba(72,101,215,0.07);
+  border: 1px solid rgba(72,101,215,0.18);
+  padding: 18px 24px;
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 24px;
+  align-items: center;
+}
+.compounding .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.compounding .text { font-size: 14px; line-height: 1.55; }
+
+.umbrella-card { background: var(--dark); color: #E6E1D5; padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; margin-bottom: 18px; }
+.umbrella-card .left .kicker { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #8FA3F0; margin-bottom: 6px; }
+.umbrella-card .left .title { font-size: 26px; font-weight: 600; }
+.umbrella-card .right { font-size: 13px; max-width: 580px; text-align: right; color: #B6B0A0; line-height: 1.5; }
+
+.agents-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.agent-card { background: rgba(255,255,255,0.6); border: 1px solid var(--line); padding: 20px; min-height: 130px; }
+.agent-card .id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 8px; }
+.agent-card .name { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+.agent-card .body { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+.beach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-top: 8px; }
+.beach-grid h4 { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+.beach-grid ul { list-style: none; }
+.beach-grid li { font-size: 14px; line-height: 1.55; color: var(--fg); margin-bottom: 14px; padding-left: 20px; position: relative; }
+.beach-grid li::before { content: "—"; position: absolute; left: 0; color: var(--accent); }
+
+.spec-card { background: rgba(255,255,255,0.6); border: 1px solid var(--line); padding: 24px 28px; }
+.spec-card .kicker { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+.spec-row { display: grid; grid-template-columns: 140px 1fr; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: baseline; gap: 24px; }
+.spec-row:last-child { border-bottom: none; }
+.spec-row .key { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.spec-row .val { font-size: 14px; color: var(--fg); line-height: 1.5; }
+.spec-row .val .em { font-family: 'Source Serif 4', serif; font-style: italic; color: var(--accent); }
+
+.moats { display: flex; flex-direction: column; gap: 10px; }
+.moat-row { display: grid; grid-template-columns: 80px 240px 1fr; gap: 24px; align-items: center; padding: 18px 22px; background: rgba(255,255,255,0.6); border-left: 3px solid var(--accent); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.moat-row .id { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+.moat-row .name { font-size: 16px; font-weight: 600; }
+.moat-row .body { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+.stage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-top: 4px; }
+.stage-grid h4 { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+.stage-block {
+  border-left: 3px solid var(--accent);
+  padding: 8px 18px;
+  font-size: 15px;
+  line-height: 1.55;
+  background: rgba(255,255,255,0.4);
+}
+
+.validation-row { display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.validation-row:last-child { border-bottom: none; }
+.validation-row .key { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.validation-row .val { font-size: 14px; color: var(--fg); line-height: 1.55; }
+
+.milestones {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
+}
+.ms .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+.ms .text { font-size: 13px; line-height: 1.45; color: var(--fg); }
+
+.team-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.team-card { background: rgba(255,255,255,0.6); border: 1px solid var(--line); padding: 28px 32px; }
+.team-card .kicker { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.team-card .name { font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+.team-card .loc { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.team-card .bio { font-size: 14px; line-height: 1.55; color: var(--fg); margin-bottom: 16px; max-width: 920px; }
+.team-card .tags { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--line); }
+.team-card .tags span { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; padding: 4px 8px; background: rgba(0,0,0,0.04); border: 1px solid var(--line); }
+
+.partnership-quote { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 17px; color: var(--muted); margin: 18px 0 22px; max-width: 1100px; line-height: 1.5; }
+
+.ask-block { background: var(--dark); color: #E6E1D5; padding: 24px 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.ask-block .col .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #8FA3F0; margin-bottom: 8px; }
+.ask-block .col .body { font-size: 14px; line-height: 1.55; color: #E6E1D5; }
+.ask-block .col .body .em { font-family: 'Source Serif 4', serif; font-style: italic; color: #C7D0FB; }
+
+@media print {
+  html, body { background: white; }
+  .deck { padding: 0; gap: 0; }
+  .slide { box-shadow: none; page-break-after: always; margin: 0; }
+  @page { size: 1440px 810px; margin: 0; }
+}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ── 01 Title ──────────────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Solana Foundation Grant 2026 · Application<br/>Bangalore · May 2026</div>
+  </div>
+  <div class="section-line"><span class="italic-serif" style="color:var(--accent); font-style:italic;">→</span> Pitch Deck</div>
+  <h1 class="headline" style="font-size:84px; line-height:1.02; max-width:1280px; margin-top:auto;">
+    The <span class="ital">honest</span> strategy<br/>
+    marketplace for Solana traders.
+  </h1>
+  <p class="lede" style="max-width:920px; margin-top:24px;">
+    Obsidia lets traders compose strategies with a no-code DSL, backtest them on real-fee
+    OHLCV with no lookahead, and publish them to a marketplace where every alert and fill
+    is auditable — explained by an AI co-pilot that shows its work.
+  </p>
+  <div class="meta-grid">
+    <div class="meta"><div class="label">Stage</div><div class="value">Public beta · 155 trades on file</div></div>
+    <div class="meta"><div class="label">First market</div><div class="value">Solana retail (Drift · Jupiter)</div></div>
+    <div class="meta"><div class="label">Founder</div><div class="value">Lopinti Abhijeeth Baba</div></div>
+    <div class="meta"><div class="label">Track</div><div class="value">DeFi infra · Trader tooling</div></div>
+  </div>
+</section>
+
+<!-- ── 02 Problem ────────────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>The Problem</div>
+  </div>
+  <div class="section-line"><span class="num">02</span> The Problem</div>
+  <h2 class="headline">The same overfit backtest, recycled across<br/>every Solana trading channel.</h2>
+
+  <div class="problem-grid">
+    <div class="problem-cell"><div class="head">Tradingview</div><div class="body">Strategies tested on closing prices, no fees, no slippage.</div></div>
+    <div class="problem-cell tinted"><div class="head">Telegram alpha</div><div class="body">Bots delete losing calls. No proof of past performance.</div></div>
+    <div class="problem-cell tinted"><div class="head">Crypto X</div><div class="body">Top traders ranked by retweets, not P&amp;L.</div></div>
+    <div class="problem-cell tinted"><div class="head">Discord groups</div><div class="body">Cherry-picked screenshots, no ledger.</div></div>
+    <div class="problem-cell tinted"><div class="head">Drift / Jupiter</div><div class="body">No native way to track or verify a strategy's edge over time.</div></div>
+    <div class="problem-cell tinted"><div class="head">Onboarding</div><div class="body">Each new tool re-asks for keys, channels, and trades.</div></div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="num">6+</div><div class="text">Disconnected tools every retail Solana trader stitches together — most asking for the same data.</div></div>
+    <div class="kpi"><div class="num">0</div><div class="text">Audited proof-of-edge between alpha groups. Every claim is a screenshot.</div></div>
+    <div class="kpi"><div class="num">1</div><div class="text">Retail trader holding the bag when the "200% backtest" goes -8% in production.</div></div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Problem</div>
+    <div>02 / 10</div>
+  </div>
+</section>
+
+<!-- ── 03 Why this is a trust problem ─────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Why It Is a Trust Problem</div>
+  </div>
+  <div class="section-line"><span class="num">03</span> Why this is a trust problem, not a UX problem</div>
+  <h2 class="headline">Public alpha, private numbers.</h2>
+
+  <div style="display:grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; margin-top: 8px;">
+    <div class="points-list">
+      <div class="point">
+        <div class="num">01</div>
+        <div>
+          <div class="head">Backtests fudge fees and slippage</div>
+          <div class="body">Most strategies look great on paper because the math skips fills. Add real Jupiter Perps fees and slippage and the edge often disappears.</div>
+        </div>
+      </div>
+      <div class="point">
+        <div class="num">02</div>
+        <div>
+          <div class="head">No proof of past calls</div>
+          <div class="body">Telegram bots, Discord channels, X traders — all delete or omit losing calls. No one keeps an honest ledger.</div>
+        </div>
+      </div>
+      <div class="point">
+        <div class="num">03</div>
+        <div>
+          <div class="head">Ranking by attention, not performance</div>
+          <div class="body">"Top trader" usually means most retweets. There is no neutral leaderboard backed by audited fills.</div>
+        </div>
+      </div>
+      <div class="point">
+        <div class="num">04</div>
+        <div>
+          <div class="head">Retail absorbs the risk</div>
+          <div class="body">The trader copying the call eats the fees, slippage, and downside. The publisher gets the upside in followers either way.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quote-card">
+      I built a bot that returned 200% in a backtest. In production it lost 8% in two weeks.
+      <span class="quote-em">The math wasn't wrong — the assumptions were.</span>
+      That is the gap Obsidia is built to close.
+      <span class="by">— Lopinti Abhijeeth Baba · Founder</span>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Why now</div>
+    <div>03 / 10</div>
+  </div>
+</section>
+
+<!-- ── 04 Solution ───────────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Solution</div>
+  </div>
+  <div class="section-line"><span class="num">04</span> Solution</div>
+  <h2 class="headline">One DSL. One audited backtester.<br/><span class="ital">One alert pipeline that shows its work.</span></h2>
+
+  <div class="pillar-grid">
+    <div class="pillar-card">
+      <div class="kicker">Honest backtester</div>
+      <div class="title">Real fees, no lookahead</div>
+      <div class="body">24 months of OHLCV at six timeframes, with Jupiter Perps and Drift fees baked in. Trade ledgers, equity curves, and drawdown — auditable down to the bar.</div>
+    </div>
+    <div class="pillar-card">
+      <div class="kicker">DSL marketplace</div>
+      <div class="title">Composable strategies</div>
+      <div class="body">A no-code DSL describes entry, exit, sizing, and fees. Authors publish; subscribers pay monthly for live signals — performance ranked by audited fills, not screenshots.</div>
+    </div>
+    <div class="pillar-card">
+      <div class="kicker">AI co-pilot</div>
+      <div class="title">Every signal, explained</div>
+      <div class="body">Each alert lands on Telegram, Discord, and email with a plain-English rationale: which signals fired, the multi-timeframe context, the historical pattern resolution.</div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Solution</div>
+    <div>04 / 10</div>
+  </div>
+</section>
+
+<!-- ── 05 How it works ──────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>How It Works</div>
+  </div>
+  <div class="section-line"><span class="num">05</span> How It Works</div>
+  <h2 class="headline">Compose. Backtest. Publish. Execute.<br/>With proof at every step.</h2>
+
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="kicker">01 / Compose</div>
+      <div class="title">No-code DSL builder</div>
+      <div class="body">Stack entry conditions (RSI, BB-position, MTF alignment), choose exit type, sizing, leverage, venue. Save as a portable JSON spec.</div>
+      <div class="footer-tag">Input · entry · exit · sizing · fees</div>
+      <div class="step-arrow">›</div>
+    </div>
+    <div class="step-card">
+      <div class="kicker">02 / Backtest</div>
+      <div class="title">Real fees, no lookahead</div>
+      <div class="body">Run against 24 months of OHLCV with Jupiter / Drift fees and slippage. Inspect every fill, equity curve, and drawdown.</div>
+      <div class="footer-tag">Output · trade ledger · equity · stats</div>
+      <div class="step-arrow">›</div>
+    </div>
+    <div class="step-card">
+      <div class="kicker">03 / Publish</div>
+      <div class="title">Marketplace listing</div>
+      <div class="body">Optionally publish to the marketplace. Audited backtest, fee model, and live-trade history visible to every subscriber.</div>
+      <div class="footer-tag">Pricing · monthly subscription</div>
+      <div class="step-arrow">›</div>
+    </div>
+    <div class="step-card">
+      <div class="kicker">04 / Execute</div>
+      <div class="title">Alerts → one-click trade</div>
+      <div class="body">Live alerts on Telegram, Discord, email — each with AI rationale. Paper-trade or one-click execute on Drift / Jupiter Perps.</div>
+      <div class="footer-tag">Output · live alerts · executed fills</div>
+    </div>
+  </div>
+
+  <div class="compounding">
+    <div class="label">Compounding<br/>effect</div>
+    <div class="text">Every published strategy expands the canonical OHLCV + fee corpus. Every fill teaches the backtester. Every subscriber tightens the ranking — the marketplace gets harder to clone with every active week.</div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">How it works</div>
+    <div>05 / 10</div>
+  </div>
+</section>
+
+<!-- ── 06 Deep-tech core ────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Vertical Strategy Agents</div>
+  </div>
+  <div class="section-line"><span class="num">06</span> The Deep-Tech Core</div>
+  <h2 class="headline-md">An umbrella DSL engine,<br/>with vertical strategy agents that own their domain.</h2>
+
+  <div class="umbrella-card">
+    <div class="left">
+      <div class="kicker">Layer 0 · Umbrella</div>
+      <div class="title">DSL Backtester + Orchestrator</div>
+    </div>
+    <div class="right">Owns the full pipeline — DSL parsing, OHLCV ingestion, no-lookahead simulation, fee + slippage application, persistence to Supabase, alert fan-out across channels.</div>
+  </div>
+
+  <div class="agents-grid">
+    <div class="agent-card"><div class="id">A.01</div><div class="name">Confluence</div><div class="body">Multi-signal scoring (RSI, MACD, MTF, sweeps, fear/greed).</div></div>
+    <div class="agent-card"><div class="id">A.02</div><div class="name">Mean Reversion</div><div class="body">BB-band fades on Jupiter Perps with structured exits.</div></div>
+    <div class="agent-card"><div class="id">A.03</div><div class="name">Realtime Spike</div><div class="body">Tick-level scalp on sharp moves with stop and target rails.</div></div>
+    <div class="agent-card"><div class="id">A.04</div><div class="name">AI Analyst</div><div class="body">Order-flow + macro synthesis into a directional call with rationale.</div></div>
+    <div class="agent-card"><div class="id">A.05</div><div class="name">Risk Sizing</div><div class="body">Notional, % equity, ATR-risk; leverage bounded per plan.</div></div>
+    <div class="agent-card"><div class="id">A.06</div><div class="name">Alert Router</div><div class="body">Telegram + Discord + email fan-out with AI-generated rationale.</div></div>
+    <div class="agent-card"><div class="id">A.07</div><div class="name">Strategy Auditor</div><div class="body">Independent re-runs of subscribed strategies on stored OHLCV.</div></div>
+    <div class="agent-card"><div class="id">A.08</div><div class="name">Memory</div><div class="body">Per-user trade ledger, win/loss patterns, plan limits.</div></div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Architecture</div>
+    <div>06 / 10</div>
+  </div>
+</section>
+
+<!-- ── 07 Beachhead ─────────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Beachhead</div>
+  </div>
+  <div class="section-line"><span class="num">07</span> Beachhead</div>
+  <h2 class="headline-md">Solana retail traders on Drift + Jupiter.<br/>One chain, deeply.</h2>
+
+  <div class="beach-grid">
+    <div>
+      <h4>Why Solana first</h4>
+      <ul>
+        <li>The most liquid retail-perps surface in DeFi today, with strong native UX (Phantom, Jupiter, Drift).</li>
+        <li>Real fee + slippage data is reachable through public RPC and exchange WebSockets — no proprietary feed required.</li>
+        <li>Stablecoin rails (USDC, USDG) and SPL primitives are mature enough to support marketplace payouts.</li>
+        <li>Aligned with Solana Foundation's grant priorities — DeFi infra and trader tooling for the long-tail user.</li>
+      </ul>
+    </div>
+
+    <div class="spec-card">
+      <div class="kicker">Initial Wedge Specification</div>
+      <div class="spec-row"><div class="key">Geography</div><div class="val"><span class="em">Solana</span>, then Solana-adjacent EVM (Base, Arbitrum) via the same DSL</div></div>
+      <div class="spec-row"><div class="key">User</div><div class="val">Retail / prosumer traders, $1k–$50k account size</div></div>
+      <div class="spec-row"><div class="key">Venues</div><div class="val">Drift Protocol · Jupiter Perps · Hyperliquid (planned)</div></div>
+      <div class="spec-row"><div class="key">Buyer</div><div class="val">Subscribers paying monthly per strategy; creators paid per subscriber</div></div>
+      <div class="spec-row"><div class="key">Pricing</div><div class="val">Free tier · Pro $19 · Trader $49 · Quant $99/mo + creator payouts</div></div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Wedge</div>
+    <div>07 / 10</div>
+  </div>
+</section>
+
+<!-- ── 08 Defensibility ─────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Defensibility</div>
+  </div>
+  <div class="section-line"><span class="num">08</span> Defensibility</div>
+  <h2 class="headline-md">A frontend is easy to copy.<br/>The execution layer underneath is not.</h2>
+
+  <div class="moats">
+    <div class="moat-row"><div class="id">M.01</div><div class="name">Real-fee OHLCV corpus</div><div class="body">24 months × 6 timeframes × N venues, with fee + slippage models per venue — sharpens with every new strategy a creator publishes.</div></div>
+    <div class="moat-row"><div class="id">M.02</div><div class="name">Composable DSL graph</div><div class="body">Strategies are JSON specs. Reusable, forkable, comparable side-by-side — operational know-how as code, not a black box.</div></div>
+    <div class="moat-row"><div class="id">M.03</div><div class="name">Audited backtest engine</div><div class="body">Independent re-runs on stored OHLCV produce reproducible numbers. Creator can't quietly fudge results between subscriber updates.</div></div>
+    <div class="moat-row"><div class="id">M.04</div><div class="name">Closed-loop signal data</div><div class="body">Every alert + fill + subscriber outcome feeds the marketplace ranking. Generic LLMs can copy a UI but not the labelled outcome data.</div></div>
+    <div class="moat-row"><div class="id">M.05</div><div class="name">Trust + audit surfaces</div><div class="body">Consent for data sharing, transparent fee model, public trade ledger. A retrofit for ad-hoc Telegram alpha groups; native here.</div></div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Moat</div>
+    <div>08 / 10</div>
+  </div>
+</section>
+
+<!-- ── 09 Where we are today ────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Stage and Validation</div>
+  </div>
+  <div class="section-line"><span class="num">09</span> Where We Are Today</div>
+  <h2 class="headline-md">Public beta. Sharp thesis. Real trades on the books.</h2>
+
+  <div class="stage-grid">
+    <div>
+      <h4>Current Stage</h4>
+      <div class="stage-block">
+        Frontend live at <span style="color:var(--accent)">obsidia.app</span> on Vercel. Backend on Railway running 24/7 paper trading. 4 in-house strategies active, 155 closed trades on file, full Supabase persistence and live alerts via Telegram + Discord + email.
+      </div>
+    </div>
+    <div>
+      <h4>Initial Validation</h4>
+      <div class="validation-row"><div class="key">Founder lived experience</div><div class="val">Three years building algo systems. Lost real money to overfit backtests — the precise pain Obsidia is built to remove.</div></div>
+      <div class="validation-row"><div class="key">Operating learning</div><div class="val">155 paper trades across 4 strategy archetypes confirm the value of fee-honest backtests.</div></div>
+      <div class="validation-row"><div class="key">Adjacent paid demand</div><div class="val">GMGN, Photon, BullX prove Solana traders pay for tooling. Backtest + audit is the unmet gap.</div></div>
+      <div class="validation-row"><div class="key">Sharper thesis</div><div class="val">Repositioned from "honest backtester" to "strategy marketplace" — recurring revenue, network effects, defensible category.</div></div>
+    </div>
+  </div>
+
+  <div class="milestones">
+    <div class="ms"><div class="label">M 1–2</div><div class="text">Public launch, first 1k waitlist signups, design partner outreach.</div></div>
+    <div class="ms"><div class="label">M 3–4</div><div class="text">Paid tier live. First 10 creator-published strategies on the marketplace.</div></div>
+    <div class="ms"><div class="label">M 5–6</div><div class="text">Independent strategy auditor live. 50 creators, 500 subscribers.</div></div>
+    <div class="ms"><div class="label">M 7–8</div><div class="text">One-click execute on Drift + Jupiter Perps. Live-fee data feed.</div></div>
+    <div class="ms"><div class="label">M 9–10</div><div class="text">Multi-chain (Base, Arbitrum) via the same DSL. Pre-seed prep.</div></div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Stage</div>
+    <div>09 / 10</div>
+  </div>
+</section>
+
+<!-- ── 10 Team and ask ──────────────────────────────────────────────────── -->
+<section class="slide">
+  <div class="slide-header">
+    <div class="brand"><span class="glyph">◆</span> Obsidia</div>
+    <div>Team and Ask</div>
+  </div>
+  <div class="section-line"><span class="num">10</span> Team and Ask</div>
+  <h2 class="headline-md">One founder. Three years of trading systems.<br/>One conviction.</h2>
+
+  <div class="team-grid">
+    <div class="team-card">
+      <div class="kicker">Founder · CEO / CTO</div>
+      <div class="name">Lopinti Abhijeeth Baba</div>
+      <div class="loc">Bangalore · India</div>
+      <div class="bio">
+        Founding engineer / CTO at Hamhey. Three years shipping production systems at scale across web3, full-stack, and trading infrastructure. Built Obsidia after losing real money to a 200% backtest that fell apart in production — turned the gap into a product.
+        Owns engineering, product, and GTM end-to-end.
+      </div>
+      <div class="tags">
+        <span>Architecture</span><span>Engineering</span><span>AI / agents</span><span>Trading systems</span><span>Solana</span><span>GTM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="partnership-quote">
+    Three years of building algo systems professionally. Obsidia is the platform I needed and never had — built first for myself, then opened up.
+  </div>
+
+  <div class="ask-block">
+    <div class="col">
+      <div class="label">What we're asking for</div>
+      <div class="body">$10,000 USDG via the <span class="em">Solana Foundation India Grant</span> — three months of focused build, infra, and a part-time strategy auditor.</div>
+    </div>
+    <div class="col">
+      <div class="label">What we will prove</div>
+      <div class="body">A working public marketplace, the first 50 audited creator strategies, and 500 paid subscribers — defensibility through verified performance.</div>
+    </div>
+    <div class="col">
+      <div class="label">Where this goes next</div>
+      <div class="body">From Solana, into the audited strategy execution layer for cross-chain DeFi — backtest, signal, execute, all with proof.</div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="tag">Team &amp; ask</div>
+    <div>10 / 10</div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

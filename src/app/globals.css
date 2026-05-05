@@ -120,6 +120,15 @@ input:-webkit-autofill:focus {
   border-color: var(--color-border);
 }
 
+/* ── Monospace metadata tag (about page, deck-style sections) ─ */
+.mono-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
 /* ── No-flash animations (perf) ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
