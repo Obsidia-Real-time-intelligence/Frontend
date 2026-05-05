@@ -29,17 +29,40 @@ async function send(opts: {
   html: string;
   text: string;
 }): Promise<boolean> {
+  const t0 = Date.now();
   const transport = getTransport();
   const from = process.env.EMAIL_FROM;
+
+  console.log(
+    `[email] → preparing send  to=${opts.to}  subject="${opts.subject}"  from=${from ?? "<unset>"}`
+  );
+
   if (!transport || !from) {
-    console.warn("Email not sent — SMTP env vars missing");
+    console.warn(
+      `[email] ✗ SKIPPED — SMTP env vars missing (host=${process.env.EMAIL_SERVER_HOST ?? "<unset>"} user=${process.env.EMAIL_SERVER_USER ?? "<unset>"} from=${from ?? "<unset>"})`
+    );
     return false;
   }
+
   try {
-    await transport.sendMail({ from, ...opts });
+    const info = await transport.sendMail({ from, ...opts });
+    const elapsed = Date.now() - t0;
+    console.log(
+      `[email] ✓ sent  to=${opts.to}  messageId=${info.messageId}  accepted=${JSON.stringify(info.accepted)}  rejected=${JSON.stringify(info.rejected)}  response="${(info.response || "").trim()}"  ${elapsed}ms`
+    );
+    if (info.rejected && info.rejected.length > 0) {
+      console.warn(
+        `[email] ⚠ recipient(s) rejected by SMTP server: ${JSON.stringify(info.rejected)}`
+      );
+      return false;
+    }
     return true;
   } catch (e) {
-    console.warn("Email send failed:", e);
+    const elapsed = Date.now() - t0;
+    const err = e as { code?: string; response?: string; message?: string };
+    console.warn(
+      `[email] ✗ send threw after ${elapsed}ms  to=${opts.to}  code=${err.code ?? "?"}  message="${err.message ?? String(e)}"  response="${(err.response ?? "").trim()}"`
+    );
     return false;
   }
 }

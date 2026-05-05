@@ -36,6 +36,10 @@ export async function POST(req: Request) {
     const sourceLabel = source ?? "landing";
     const total = count ?? "?";
 
+    console.log(
+      `[waitlist] → fanning out notifications  email=${normalized}  source=${sourceLabel}  total=${total}`
+    );
+
     // Fire-and-forget — never block the user response on third-party delivery
     Promise.allSettled([
       sendWaitlistConfirmation(normalized),
@@ -53,7 +57,14 @@ export async function POST(req: Request) {
         `🟢 **New waitlist signup**\n` +
           `\`${normalized}\` · source: ${sourceLabel} · total: ${total}`
       ),
-    ]).catch(() => {});
+    ]).then((results) => {
+      const labels = ["welcome-email", "admin-email", "telegram", "discord"];
+      const summary = results.map((r, i) => {
+        if (r.status === "fulfilled") return `${labels[i]}=${r.value ? "ok" : "skipped/failed"}`;
+        return `${labels[i]}=ERROR(${(r.reason as Error)?.message ?? r.reason})`;
+      });
+      console.log(`[waitlist] ← fanout done: ${summary.join("  ")}`);
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
