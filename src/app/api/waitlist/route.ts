@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { notifyAdmin } from "@/lib/telegram";
@@ -40,31 +41,35 @@ export async function POST(req: Request) {
       `[waitlist] → fanning out notifications  email=${normalized}  source=${sourceLabel}  total=${total}`
     );
 
-    // Fire-and-forget — never block the user response on third-party delivery
-    Promise.allSettled([
-      sendWaitlistConfirmation(normalized),
-      notifyAdminEmail(
-        `New waitlist signup: ${normalized}`,
-        `Email: ${normalized}\nSource: ${sourceLabel}\nTotal: ${total}`
-      ),
-      notifyAdmin(
-        `🟢 *New waitlist signup*\n` +
-          `\`${normalized}\`\n` +
-          `_source: ${sourceLabel}_\n` +
-          `_total: ${total}_`
-      ),
-      notifyDiscord(
-        `🟢 **New waitlist signup**\n` +
-          `\`${normalized}\` · source: ${sourceLabel} · total: ${total}`
-      ),
-    ]).then((results) => {
-      const labels = ["welcome-email", "admin-email", "telegram", "discord"];
-      const summary = results.map((r, i) => {
-        if (r.status === "fulfilled") return `${labels[i]}=${r.value ? "ok" : "skipped/failed"}`;
-        return `${labels[i]}=ERROR(${(r.reason as Error)?.message ?? r.reason})`;
-      });
-      console.log(`[waitlist] ← fanout done: ${summary.join("  ")}`);
-    });
+    // On serverless platforms (Vercel), the function context is frozen the
+    // moment the response is returned — fire-and-forget Promises get killed
+    // mid-flight. `after()` keeps the async work alive past the response.
+    after(
+      Promise.allSettled([
+        sendWaitlistConfirmation(normalized),
+        notifyAdminEmail(
+          `New waitlist signup: ${normalized}`,
+          `Email: ${normalized}\nSource: ${sourceLabel}\nTotal: ${total}`
+        ),
+        notifyAdmin(
+          `🟢 *New waitlist signup*\n` +
+            `\`${normalized}\`\n` +
+            `_source: ${sourceLabel}_\n` +
+            `_total: ${total}_`
+        ),
+        notifyDiscord(
+          `🟢 **New waitlist signup**\n` +
+            `\`${normalized}\` · source: ${sourceLabel} · total: ${total}`
+        ),
+      ]).then((results) => {
+        const labels = ["welcome-email", "admin-email", "telegram", "discord"];
+        const summary = results.map((r, i) => {
+          if (r.status === "fulfilled") return `${labels[i]}=${r.value ? "ok" : "skipped/failed"}`;
+          return `${labels[i]}=ERROR(${(r.reason as Error)?.message ?? r.reason})`;
+        });
+        console.log(`[waitlist] ← fanout done: ${summary.join("  ")}`);
+      })
+    );
 
     return NextResponse.json({ ok: true });
   } catch (err) {
