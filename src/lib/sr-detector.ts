@@ -62,14 +62,28 @@ interface Cluster {
 function findPivots(bars: Bar[], n: number): { highs: [number, number][]; lows: [number, number][] } {
   const highs: [number, number][] = [];
   const lows: [number, number][] = [];
-  for (let i = n; i < bars.length - n; i++) {
+  // Asymmetric right-edge handling: a bar qualifies as a pivot if it beats
+  // the `n` bars to its left AND all available bars to its right (even if
+  // that's < n at the right edge). Without this, the last `n` bars can
+  // never form a pivot — so a fresh swing high never shows up as resistance
+  // until it's already in the rear-view mirror. We still require ≥1 right
+  // neighbor (the very last bar can't be a pivot since there's nothing
+  // ahead of it yet).
+  for (let i = n; i < bars.length - 1; i++) {
     const cur = bars[i];
+    const rightWindow = Math.min(n, bars.length - 1 - i);
     let isHigh = true;
     let isLow = true;
-    for (let j = i - n; j <= i + n && (isHigh || isLow); j++) {
-      if (j === i) continue;
+    // Strict on the left: must strictly beat the n bars before it.
+    for (let j = i - n; j < i && (isHigh || isLow); j++) {
       if (bars[j].high >= cur.high) isHigh = false;
       if (bars[j].low <= cur.low) isLow = false;
+    }
+    // Right side allows ties (≥), so a still-forming pivot near the edge
+    // doesn't get disqualified by an equal-high candle ahead of it.
+    for (let j = i + 1; j <= i + rightWindow && (isHigh || isLow); j++) {
+      if (bars[j].high > cur.high) isHigh = false;
+      if (bars[j].low < cur.low) isLow = false;
     }
     if (isHigh) highs.push([i, cur.high]);
     if (isLow) lows.push([i, cur.low]);
@@ -118,6 +132,8 @@ export function detectSr(bars: Bar[], timeframe: Timeframe): SrZoneRaw[] {
   const p = TF_PARAMS[timeframe];
   const sliced = bars.slice(-p.lookbackBars);
   const n = sliced.length;
+  if (n === 0) return [];
+
   const { highs, lows } = findPivots(sliced, p.pivotN);
 
   const out: SrZoneRaw[] = [];
@@ -139,6 +155,61 @@ export function detectSr(bars: Bar[], timeframe: Timeframe): SrZoneRaw[] {
       });
     }
   }
+
+  // Range anchors: when price is trending into fresh highs/lows, no pivot
+  // confirms above/below current price even though traders clearly see
+  // the recent extreme as resistance/support. Always include the range
+  // high and range low over the lookback window as anchor zones, unless
+  // an existing pivot zone already sits within tol_pct of them.
+  let rangeHi = sliced[0].high;
+  let rangeHiBar = 0;
+  let rangeLo = sliced[0].low;
+  let rangeLoBar = 0;
+  for (let i = 1; i < n; i++) {
+    if (sliced[i].high > rangeHi) {
+      rangeHi = sliced[i].high;
+      rangeHiBar = i;
+    }
+    if (sliced[i].low < rangeLo) {
+      rangeLo = sliced[i].low;
+      rangeLoBar = i;
+    }
+  }
+  const anchorHigh: SrZoneRaw = {
+    kind: "resistance",
+    center: round4(rangeHi),
+    low: round4(rangeHi),
+    high: round4(rangeHi),
+    touches: 1,
+    lastTouchBar: rangeHiBar,
+    ageBars: n - 1 - rangeHiBar,
+    score: round3(scoreZone(
+      { center: rangeHi, low: rangeHi, high: rangeHi, touches: 1, lastBar: rangeHiBar, prices: [rangeHi] },
+      n
+    )),
+  };
+  const anchorLow: SrZoneRaw = {
+    kind: "support",
+    center: round4(rangeLo),
+    low: round4(rangeLo),
+    high: round4(rangeLo),
+    touches: 1,
+    lastTouchBar: rangeLoBar,
+    ageBars: n - 1 - rangeLoBar,
+    score: round3(scoreZone(
+      { center: rangeLo, low: rangeLo, high: rangeLo, touches: 1, lastBar: rangeLoBar, prices: [rangeLo] },
+      n
+    )),
+  };
+  for (const anchor of [anchorHigh, anchorLow]) {
+    const dup = out.find(
+      (z) =>
+        z.kind === anchor.kind &&
+        (Math.abs(z.center - anchor.center) / anchor.center) * 100 <= p.tolPct
+    );
+    if (!dup) out.push(anchor);
+  }
+
   out.sort((a, b) => b.score - a.score || a.center - b.center);
   return out;
 }
