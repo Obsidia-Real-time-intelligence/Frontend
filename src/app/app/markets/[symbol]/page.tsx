@@ -21,7 +21,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TVAdvanced } from "@/components/charts/tv-advanced";
 import { fmtPct, timeAgo } from "@/lib/utils";
 import { useLivePrice, type Tick } from "@/lib/live-prices";
-import { useAlerts, useSrZones, type SrZone } from "@/lib/api";
+import { useAlerts, type SrZone } from "@/lib/api";
+import { useLiveSr } from "@/lib/use-live-sr";
 import { SrList } from "@/components/dashboard/sr-list";
 import type { Alert } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export default function MarketDetailPage({
   const tvSymbol = SYMBOL_TO_TV[symbol] ?? "BINANCE:SOLUSDT";
 
   const tick = useLivePrice(symbol);
-  const { data: srZones = [] } = useSrZones(symbol, "15m");
+  const { data: srZones = [] } = useLiveSr(symbol, "15m");
   const { data: allAlerts = [] } = useAlerts(100);
   const symbolAlerts = allAlerts.filter((a) => a.symbol === symbol);
 

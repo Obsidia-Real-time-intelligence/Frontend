@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useKpis, useAlerts, useStrategies, useTrades } from "@/lib/api";
 import { useLivePrices } from "@/lib/live-prices";
-import { useSrZones } from "@/lib/api";
+import { useLiveSr } from "@/lib/use-live-sr";
 import { BotPerformance } from "@/components/dashboard/bot-performance";
 import { SrList } from "@/components/dashboard/sr-list";
 import { fmtPct, fmtUsd } from "@/lib/utils";
@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const { data: kpis, isLoading: kpisLoading } = useKpis();
   const { data: alerts = [] } = useAlerts(5);
   const { data: strategies = [] } = useStrategies();
-  const { data: srZones = [] } = useSrZones("SOL/USDT", "15m");
+  const { data: srZones = [] } = useLiveSr("SOL/USDT", "15m");
   const { data: trades = [] } = useTrades();
 
   // Live ticks for SOL + BTC + ETH

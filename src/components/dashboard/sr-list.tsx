@@ -29,7 +29,7 @@ export function SrList<T extends SrInput>({
   if (rows.length === 0) {
     return (
       <p className="text-[11px] text-[var(--color-muted-foreground)] py-2">
-        Computing — refreshes hourly via worker.
+        Loading live pivots from Binance…
       </p>
     );
   }
