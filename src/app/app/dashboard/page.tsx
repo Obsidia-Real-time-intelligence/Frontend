@@ -13,6 +13,7 @@ import { useKpis, useAlerts, useStrategies, useTrades } from "@/lib/api";
 import { useLivePrices } from "@/lib/live-prices";
 import { useSrZones } from "@/lib/api";
 import { BotPerformance } from "@/components/dashboard/bot-performance";
+import { SrList } from "@/components/dashboard/sr-list";
 import { fmtPct, fmtUsd } from "@/lib/utils";
 
 const STARTING_EQUITY = 8500;
@@ -234,53 +235,7 @@ export default function DashboardPage() {
                   Computing — refreshes hourly via worker.
                 </p>
               ) : (
-                <ul className="space-y-1">
-                  {(() => {
-                    // Polarity flip: stored `kind` reflects the pivot type
-                    // (high → "resistance", low → "support") at formation.
-                    // After a breakout, a former resistance becomes support
-                    // and vice versa. Reclassify against current price so
-                    // the badge tells the truth right now. Sort by distance
-                    // from current price so the most relevant levels surface.
-                    const px = sol?.price;
-                    const rows = px
-                      ? [...srZones]
-                          .map((l) => ({
-                            ...l,
-                            displayKind:
-                              Number(l.center) >= px ? "resistance" : "support",
-                          }))
-                          .sort(
-                            (a, b) =>
-                              Math.abs(Number(a.center) - px) -
-                              Math.abs(Number(b.center) - px)
-                          )
-                      : srZones.map((l) => ({ ...l, displayKind: l.kind }));
-                    return rows.slice(0, 6).map((l, i) => (
-                    <li
-                      key={i}
-                      className={`flex items-center justify-between text-xs px-2 py-1 rounded-md ${
-                        l.displayKind === "resistance"
-                          ? "bg-[var(--color-danger)]/5"
-                          : "bg-[var(--color-success)]/5"
-                      }`}
-                    >
-                      <span
-                        className={`tabular font-medium ${
-                          l.displayKind === "resistance"
-                            ? "text-[var(--color-danger)]"
-                            : "text-[var(--color-success)]"
-                        }`}
-                      >
-                        ${Number(l.center).toFixed(2)}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                        {l.displayKind[0].toUpperCase()} ×{l.touches}
-                      </span>
-                    </li>
-                  ));
-                  })()}
-                </ul>
+                <SrList zones={srZones} currentPrice={sol?.price} maxRows={6} />
               )}
             </div>
 

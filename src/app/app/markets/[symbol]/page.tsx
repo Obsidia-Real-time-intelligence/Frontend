@@ -22,6 +22,7 @@ import { TVAdvanced } from "@/components/charts/tv-advanced";
 import { fmtPct, timeAgo } from "@/lib/utils";
 import { useLivePrice, type Tick } from "@/lib/live-prices";
 import { useAlerts, useSrZones, type SrZone } from "@/lib/api";
+import { SrList } from "@/components/dashboard/sr-list";
 import type { Alert } from "@/lib/types";
 
 const SYMBOL_TO_TV: Record<string, string> = {
@@ -223,52 +224,12 @@ function LeftRail({
             Computing — refreshes hourly via worker.
           </p>
         ) : (
-          <ul className="space-y-1">
-            {(() => {
-              // Stored `kind` reflects whether the level was a pivot high
-              // (resistance at formation) or pivot low (support). Once price
-              // breaks through, polarity flips. Reclassify against the live
-              // tick so the badge tells the truth right now, and sort by
-              // distance from price so the closest levels surface first.
-              const px = tick?.price;
-              const rows = px
-                ? [...srZones]
-                    .map((l) => ({
-                      ...l,
-                      displayKind:
-                        Number(l.center) >= px ? "resistance" : "support",
-                    }))
-                    .sort(
-                      (a, b) =>
-                        Math.abs(Number(a.center) - px) -
-                        Math.abs(Number(b.center) - px)
-                    )
-                : srZones.map((l) => ({ ...l, displayKind: l.kind }));
-              return rows.slice(0, 8).map((l) => (
-              <li
-                key={l.id}
-                className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
-                  l.displayKind === "resistance"
-                    ? "bg-[var(--color-danger)]/5"
-                    : "bg-[var(--color-success)]/5"
-                }`}
-              >
-                <span
-                  className={`tabular font-medium ${
-                    l.displayKind === "resistance"
-                      ? "text-[var(--color-danger)]"
-                      : "text-[var(--color-success)]"
-                  }`}
-                >
-                  ${Number(l.center).toFixed(2)}
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                  {l.displayKind[0].toUpperCase()} ×{l.touches}
-                </span>
-              </li>
-              ));
-            })()}
-          </ul>
+          <SrList
+            zones={srZones}
+            currentPrice={tick?.price}
+            maxRows={8}
+            size="md"
+          />
         )}
       </div>
 
