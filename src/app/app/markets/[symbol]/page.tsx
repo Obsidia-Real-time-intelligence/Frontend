@@ -224,18 +224,38 @@ function LeftRail({
           </p>
         ) : (
           <ul className="space-y-1">
-            {srZones.slice(0, 8).map((l) => (
+            {(() => {
+              // Stored `kind` reflects whether the level was a pivot high
+              // (resistance at formation) or pivot low (support). Once price
+              // breaks through, polarity flips. Reclassify against the live
+              // tick so the badge tells the truth right now, and sort by
+              // distance from price so the closest levels surface first.
+              const px = tick?.price;
+              const rows = px
+                ? [...srZones]
+                    .map((l) => ({
+                      ...l,
+                      displayKind:
+                        Number(l.center) >= px ? "resistance" : "support",
+                    }))
+                    .sort(
+                      (a, b) =>
+                        Math.abs(Number(a.center) - px) -
+                        Math.abs(Number(b.center) - px)
+                    )
+                : srZones.map((l) => ({ ...l, displayKind: l.kind }));
+              return rows.slice(0, 8).map((l) => (
               <li
                 key={l.id}
                 className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
-                  l.kind === "resistance"
+                  l.displayKind === "resistance"
                     ? "bg-[var(--color-danger)]/5"
                     : "bg-[var(--color-success)]/5"
                 }`}
               >
                 <span
                   className={`tabular font-medium ${
-                    l.kind === "resistance"
+                    l.displayKind === "resistance"
                       ? "text-[var(--color-danger)]"
                       : "text-[var(--color-success)]"
                   }`}
@@ -243,10 +263,11 @@ function LeftRail({
                   ${Number(l.center).toFixed(2)}
                 </span>
                 <span className="text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                  {l.kind[0].toUpperCase()} ×{l.touches}
+                  {l.displayKind[0].toUpperCase()} ×{l.touches}
                 </span>
               </li>
-            ))}
+              ));
+            })()}
           </ul>
         )}
       </div>
