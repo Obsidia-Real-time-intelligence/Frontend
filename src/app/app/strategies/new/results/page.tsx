@@ -9,6 +9,7 @@ import {
   Play,
   RotateCcw,
   FastForward,
+  RefreshCw,
 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { KPICard } from "@/components/dashboard/kpi-card";
@@ -24,21 +25,32 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { fmtPct, fmtUsd } from "@/lib/utils";
-import { useCreateStrategy, useSaveBacktestForStrategy } from "@/lib/api";
+import {
+  useCreateStrategy,
+  useRunBacktest,
+  useSaveBacktestForStrategy,
+} from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { usePlayback } from "@/lib/use-playback";
 import type { BacktestResult, StrategyDSL, Trade } from "@/lib/types";
 
 const STARTING_CAPITAL = 8500;
-const SPEEDS = [1, 4, 16] as const;
+// 1× plays the full backtest over 30s — slow enough to watch the equity
+// curve build day-by-day. Multipliers cover slow-motion (0.5×) for
+// inspecting a critical drawdown, or fast-forward (2×/4×) when the user
+// just wants the final number.
+const SPEEDS = [0.5, 1, 2, 4] as const;
+const PLAYBACK_BASE_MS = 30_000;
 
 export default function BacktestResultsPage() {
   const router = useRouter();
   const create = useCreateStrategy();
   const saveBacktest = useSaveBacktestForStrategy();
+  const runBacktest = useRunBacktest();
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [dsl, setDsl] = useState<StrategyDSL | null>(null);
   const [saving, setSaving] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const [isPlaying, setIsPlaying] = useState(true);
 
@@ -94,7 +106,7 @@ export default function BacktestResultsPage() {
   const playback = usePlayback({
     startTime,
     endTime,
-    durationMs: 7000,
+    durationMs: PLAYBACK_BASE_MS,
     speed,
     isPlaying,
   });
@@ -138,6 +150,23 @@ export default function BacktestResultsPage() {
   // Live-recomputed KPIs from sliced data
   const liveStats = computeStats(tradesShown, equityShown);
 
+  async function handleRerun() {
+    if (!dsl) return;
+    setRerunning(true);
+    setIsPlaying(false);
+    try {
+      const fresh = await runBacktest.mutateAsync({ dsl });
+      sessionStorage.setItem("obsidia.lastBacktest", JSON.stringify(fresh));
+      setResult(fresh);
+      playback.restart();
+      setIsPlaying(true);
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setRerunning(false);
+    }
+  }
+
   async function handleSave() {
     if (!dsl || !result) return;
     setSaving(true);
@@ -176,6 +205,17 @@ export default function BacktestResultsPage() {
                 <ArrowLeft className="size-4" />
                 Back to builder
               </Link>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRerun}
+              disabled={rerunning || !dsl}
+            >
+              <RefreshCw
+                className={`size-4 ${rerunning ? "animate-spin" : ""}`}
+              />
+              {rerunning ? "Re-running…" : "Re-run"}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={saving || !dsl}>
               <Save className="size-4" />
